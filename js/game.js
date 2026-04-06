@@ -528,60 +528,138 @@ class GameScene extends Phaser.Scene {
         deep.setDepth(2);
     }
 
-    // --- FORTRESS BASE ---
+    // --- FORTRESS LOBBY (ground floor) ---
     createFortressBase() {
         this.fortressBase = this.add.container(FORT_CX, GROUND_Y - BASE_H / 2);
         this.fortressBase.setDepth(10);
+        this.lobbyDogSprites = [];
 
         const bg = this.add.graphics();
-        // Stone wall base
-        bg.fillStyle(0x6B5B4B);
-        bg.fillRoundedRect(-ROOM_W / 2 - 20, -BASE_H / 2, ROOM_W + 40, BASE_H, { tl: 8, tr: 8, bl: 0, br: 0 });
-        // Darker stone pattern
-        bg.fillStyle(0x5A4A3A);
-        const stoneW = 72, stoneH = 48;
-        const cols = Math.floor((ROOM_W + 20) / (stoneW + 6));
-        for (let row = 0; row < 3; row++) {
-            for (let col = 0; col < cols; col++) {
-                const bx = -ROOM_W / 2 - 10 + col * (stoneW + 6) + (row % 2) * ((stoneW + 6) / 2);
-                const by = -BASE_H / 2 + 10 + row * 55;
-                bg.fillRoundedRect(bx, by, stoneW, stoneH, 3);
-            }
-        }
-        // Door
-        bg.fillStyle(0x3D2200);
-        bg.fillRoundedRect(-55, -20, 110, BASE_H / 2 + 20, { tl: 55, tr: 55, bl: 0, br: 0 });
-        bg.fillStyle(0x2A1700);
-        bg.fillRoundedRect(-45, -10, 90, BASE_H / 2 + 10, { tl: 45, tr: 45, bl: 0, br: 0 });
-        // Door handle
-        bg.fillStyle(0xDAA520);
-        bg.fillCircle(25, 30, 8);
 
-        // Sign
+        // Back wall - warm interior
+        bg.fillStyle(0x5A4030);
+        bg.fillRect(-ROOM_W / 2, -BASE_H / 2, ROOM_W, BASE_H);
+
+        // Floor - wood planks
         bg.fillStyle(0x8B6914);
-        bg.fillRoundedRect(-140, -BASE_H / 2 - 30, 280, 45, 6);
-        bg.lineStyle(3, 0x5A4A1A);
-        bg.strokeRoundedRect(-140, -BASE_H / 2 - 30, 280, 45, 6);
+        bg.fillRect(-ROOM_W / 2, BASE_H / 2 - 25, ROOM_W, 25);
+        bg.lineStyle(1, 0x6B4F12, 0.4);
+        for (let fx = -ROOM_W / 2; fx < ROOM_W / 2; fx += 60) {
+            bg.beginPath(); bg.moveTo(fx, BASE_H / 2 - 25); bg.lineTo(fx, BASE_H / 2); bg.strokePath();
+        }
+
+        // Interior warm glow
+        const light = Phaser.Display.Color.ValueToColor(0xC4813D).lighten(25).color;
+        bg.fillStyle(light, 0.2);
+        bg.fillRect(-ROOM_W / 2, -BASE_H / 2, ROOM_W, BASE_H - 25);
+
+        // Thin structural edges
+        bg.fillStyle(0x5A4A3A);
+        bg.fillRect(-ROOM_W / 2 - 6, -BASE_H / 2, 6, BASE_H);
+        bg.fillRect(ROOM_W / 2, -BASE_H / 2, 6, BASE_H);
+        bg.lineStyle(2, 0x3A2A1A, 0.6);
+        bg.strokeRect(-ROOM_W / 2, -BASE_H / 2, ROOM_W, BASE_H);
+
+        // Interior details - welcome mat, dog bowls, notice board
+        // Welcome mat
+        bg.fillStyle(0x993333, 0.5);
+        bg.fillRoundedRect(-50, BASE_H / 2 - 40, 100, 18, 4);
+
+        // Dog bowls
+        bg.fillStyle(0xAAAAAA);
+        bg.fillRoundedRect(-ROOM_W / 2 + 30, BASE_H / 2 - 40, 30, 15, 6);
+        bg.fillRoundedRect(-ROOM_W / 2 + 70, BASE_H / 2 - 40, 30, 15, 6);
+        bg.fillStyle(0x4488CC);
+        bg.fillRect(-ROOM_W / 2 + 34, BASE_H / 2 - 37, 22, 8);
+
+        // Notice board on back wall
+        bg.fillStyle(0x6B4F12);
+        bg.fillRoundedRect(ROOM_W / 2 - 100, -BASE_H / 2 + 15, 70, 55, 4);
+        bg.fillStyle(0xDDCCAA);
+        bg.fillRect(ROOM_W / 2 - 95, -BASE_H / 2 + 20, 25, 18);
+        bg.fillRect(ROOM_W / 2 - 65, -BASE_H / 2 + 20, 25, 18);
+        bg.fillRect(ROOM_W / 2 - 80, -BASE_H / 2 + 44, 30, 18);
 
         this.fortressBase.add(bg);
 
-        const sign = this.add.text(0, -BASE_H / 2 - 10, 'DOG FORTRESS', {
+        // Sign above lobby
+        const signBg = this.add.graphics();
+        signBg.fillStyle(0x8B6914);
+        signBg.fillRoundedRect(-160, -BASE_H / 2 - 35, 320, 50, 6);
+        signBg.lineStyle(3, 0x5A4A1A);
+        signBg.strokeRoundedRect(-160, -BASE_H / 2 - 35, 320, 50, 6);
+        this.fortressBase.add(signBg);
+
+        const sign = this.add.text(0, -BASE_H / 2 - 12, 'DOG FORTRESS', {
             fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '32px', color: '#FFD700',
-            stroke: '#3D1F00', strokeThickness: 4,
+            fontSize: '34px', color: '#FFD700',
+            stroke: '#3D1F00', strokeThickness: 5,
         }).setOrigin(0.5);
         this.fortressBase.add(sign);
 
-        // Fortress wall extensions (side towers)
-        const leftTower = this.add.graphics();
-        leftTower.fillStyle(0x5A4A3A);
-        leftTower.fillRect(-ROOM_W / 2 - 40, -BASE_H / 2, 25, BASE_H);
-        this.fortressBase.add(leftTower);
+        // Lobby label
+        const lobbyLabel = this.add.text(-ROOM_W / 2 + 15, -BASE_H / 2 + 8, 'Lobby', {
+            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
+            stroke: '#000', strokeThickness: 4,
+        });
+        this.fortressBase.add(lobbyLabel);
 
-        const rightTower = this.add.graphics();
-        rightTower.fillStyle(0x5A4A3A);
-        rightTower.fillRect(ROOM_W / 2 + 15, -BASE_H / 2, 25, BASE_H);
-        this.fortressBase.add(rightTower);
+        // Initial lobby dogs
+        this.updateLobbyDogs();
+    }
+
+    updateLobbyDogs() {
+        // Remove old lobby sprites
+        this.lobbyDogSprites.forEach(s => s.destroy());
+        this.lobbyDogSprites = [];
+
+        // Find unassigned dogs
+        const freeDogs = this.dogs.filter(d => d.assignedRoom === -1);
+        const maxShow = Math.min(freeDogs.length, 6);
+        const lobbyY = GROUND_Y - BASE_H / 2;
+
+        for (let i = 0; i < maxShow; i++) {
+            const dog = freeDogs[i];
+            const startX = FORT_CX - ROOM_W / 3 + Phaser.Math.Between(0, ROOM_W * 0.6);
+            const dogSprite = this.add.image(startX, lobbyY + BASE_H / 2 - 30, 'dog_' + dog.breedIndex);
+            dogSprite.setScale(1.4).setDepth(11).setInteractive();
+
+            dogSprite.on('pointerup', () => {
+                if (!this.isDragging) { this.dogTapped = true; this.showDogInfo(dog); }
+            });
+
+            // Wander randomly in the lobby
+            const wanderLeft = FORT_CX - ROOM_W / 3;
+            const wanderRight = FORT_CX + ROOM_W / 3;
+            const wanderTo = () => {
+                if (!dogSprite.active) return;
+                const targetX = Phaser.Math.Between(wanderLeft, wanderRight);
+                dogSprite.setFlipX(targetX < dogSprite.x);
+                this.tweens.add({
+                    targets: dogSprite, x: targetX,
+                    duration: Phaser.Math.Between(2000, 4000),
+                    ease: 'Sine.easeInOut',
+                    onComplete: () => {
+                        this.time.delayedCall(Phaser.Math.Between(500, 2000), wanderTo);
+                    },
+                });
+            };
+            this.time.delayedCall(i * 300, wanderTo);
+
+            this.lobbyDogSprites.push(dogSprite);
+        }
+
+        // Show count if more dogs than can display
+        if (freeDogs.length > maxShow) {
+            const moreText = this.add.text(
+                FORT_CX + ROOM_W / 2 - 20, lobbyY + BASE_H / 2 - 30,
+                `+${freeDogs.length - maxShow}`, {
+                    fontFamily: 'Arial Black', fontSize: '24px', color: '#AAAAAA',
+                    stroke: '#000', strokeThickness: 3,
+                }
+            ).setOrigin(1, 0.5).setDepth(11);
+            this.lobbyDogSprites.push(moreText);
+        }
     }
 
     // --- HUD (fixed to camera) ---
@@ -1927,6 +2005,7 @@ class GameScene extends Phaser.Scene {
                 const ry = this.getRoomY(idx);
                 this.spawnParticles(FORT_CX, ry + ROOM_H / 2, 0x44FF88, 10);
             });
+            this.updateLobbyDogs();
         }
     }
 
@@ -2098,6 +2177,7 @@ class GameScene extends Phaser.Scene {
         dog.assignedRoom = -1;
         this.showNotification(`${dog.name} unassigned!`, '#AAAAAA');
         if (this.roomPanelOpen) this.updateRoomPanel();
+        this.updateLobbyDogs();
     }
 
     // --- DOG PICKER (for assigning) ---
@@ -2318,6 +2398,7 @@ class GameScene extends Phaser.Scene {
             this.showNotification(`${dog.name} assigned!`, '#C4813D');
         }
         this.updateRoomActiveState(room);
+        this.updateLobbyDogs();
     }
 
     // --- WAVES / COMBAT ---
@@ -2839,6 +2920,7 @@ class GameScene extends Phaser.Scene {
             const ry = this.getRoomY(roomIndex);
             this.spawnParticles(FORT_CX, ry + ROOM_H / 2, 0xFFD700, 15);
             this.updateHUD();
+            this.updateLobbyDogs();
             return true;
         }
         return false;
