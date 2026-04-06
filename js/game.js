@@ -52,25 +52,43 @@ const ROOM_DEFS = {
 
 // --- ENEMY DEFINITIONS ---
 const ENEMY_DEFS = {
-    wolf: { name: 'Wolf', color: 0x888888, hp: 40, speed: 70, steal: 8, reward: 12, size: 44 },
-    cat: { name: 'Ninja Cat', color: 0xE87020, hp: 25, speed: 120, steal: 12, reward: 18, size: 36 },
-    raccoon: { name: 'Raccoon', color: 0x606060, hp: 100, speed: 50, steal: 20, reward: 45, size: 50 },
-    bear: { name: 'Bear', color: 0x8B5A2B, hp: 350, speed: 35, steal: 40, reward: 150, size: 70 },
+    scout:   { name: 'Scout Bot',   color: 0x88AACC, hp: 55,  speed: 80,  damage: 8,  reward: 10,  size: 44, flying: false },
+    assault: { name: 'Assault Bot', color: 0xCC6622, hp: 35,  speed: 130, damage: 12, reward: 15,  size: 36, flying: false },
+    tank:    { name: 'Tank Bot',    color: 0x667788, hp: 140, speed: 55,  damage: 20, reward: 40,  size: 50, flying: false },
+    mega:    { name: 'Mega Bot',    color: 0x994444, hp: 500, speed: 40,  damage: 40, reward: 120, size: 70, flying: false },
+    drone:   { name: 'Scout Drone', color: 0x6688BB, hp: 20,  speed: 100, damage: 5,  reward: 10,  size: 32, flying: true, flyHeight: 2 },
+    gunship: { name: 'Gunship',     color: 0x883333, hp: 60,  speed: 65,  damage: 15, reward: 35,  size: 46, flying: true, flyHeight: 3 },
 };
 
+// --- ROOM HP ---
+const ROOM_MAX_HP = { income: 100, special: 80, turret: 120 };
+const ROOM_HP_PER_LEVEL = 20;
+const ENEMY_ATTACK_INTERVAL = 1500;
+const FLYING_ATTACK_INTERVAL = 2000;
+
 // --- DOG DATA ---
+// Skill categories: combat, production, repair, communication
+// Each breed has a primary skill affinity (higher random range for that skill)
 const DOG_BREEDS = [
-    { name: 'Labrador', color: 0xD4A843, bonus: 'income' },
-    { name: 'German Shepherd', color: 0xA67B4B, bonus: 'combat' },
-    { name: 'Corgi', color: 0xE8A040, bonus: 'speed' },
-    { name: 'Husky', color: 0xB0B8C8, bonus: 'allround' },
-    { name: 'Poodle', color: 0xE8DDD0, bonus: 'income' },
-    { name: 'Dalmatian', color: 0xF0F0F0, bonus: 'combat' },
-    { name: 'Bulldog', color: 0xC8A878, bonus: 'defense' },
-    { name: 'Shiba Inu', color: 0xD4884A, bonus: 'speed' },
-    { name: 'Beagle', color: 0xC89050, bonus: 'allround' },
-    { name: 'Border Collie', color: 0x3A3A3A, bonus: 'income' },
+    { name: 'Labrador', color: 0xD4A843, affinity: 'production' },
+    { name: 'German Shepherd', color: 0xA67B4B, affinity: 'combat' },
+    { name: 'Corgi', color: 0xE8A040, affinity: 'repair' },
+    { name: 'Husky', color: 0xB0B8C8, affinity: 'combat' },
+    { name: 'Poodle', color: 0xE8DDD0, affinity: 'production' },
+    { name: 'Dalmatian', color: 0xF0F0F0, affinity: 'combat' },
+    { name: 'Bulldog', color: 0xC8A878, affinity: 'repair' },
+    { name: 'Shiba Inu', color: 0xD4884A, affinity: 'communication' },
+    { name: 'Beagle', color: 0xC89050, affinity: 'production' },
+    { name: 'Border Collie', color: 0x3A3A3A, affinity: 'communication' },
 ];
+
+// Maps room types to their skill category
+const ROOM_SKILL_MAP = {
+    quarters: 'production', kitchen: 'production', workshop: 'production',
+    radio: 'communication',
+    machinegun: 'combat', cannon: 'combat', sniper: 'combat',
+};
+
 
 const DOG_NAMES = [
     'Buddy','Max','Charlie','Cooper','Rocky','Bear','Duke','Tucker',
@@ -127,11 +145,11 @@ class BootScene extends Phaser.Scene {
             this.generateDog('dog_' + i, breed.color);
         });
 
-        // Enemy textures
-        this.generateEnemy('enemy_wolf', 0x888888, 44, false);
-        this.generateEnemy('enemy_cat', 0xE87020, 36, false);
-        this.generateEnemy('enemy_raccoon', 0x606060, 50, false);
-        this.generateEnemy('enemy_bear', 0x8B5A2B, 70, true);
+        // Robot enemy textures
+        Object.keys(ENEMY_DEFS).forEach(key => {
+            const def = ENEMY_DEFS[key];
+            this.generateRobot('enemy_' + key, def.color, def.size, key === 'mega', def.flying);
+        });
     }
 
     generateDog(key, bodyColor) {
@@ -181,57 +199,116 @@ class BootScene extends Phaser.Scene {
         g.destroy();
     }
 
-    generateEnemy(key, color, size, isBoss) {
+    generateRobot(key, color, size, isBoss, isFlying) {
         const g = this.make.graphics({ add: false });
         const s = size;
+        const dark = Phaser.Display.Color.ValueToColor(color).darken(30).color;
 
-        // Body
-        g.fillStyle(color);
-        if (isBoss) {
-            // Bear - upright, big
-            g.fillRoundedRect(s * 0.15, s * 0.1, s * 0.7, s * 0.65, 8);
-            // Head
-            g.fillCircle(s * 0.5, s * 0.15, s * 0.18);
-            // Ears
-            g.fillCircle(s * 0.35, s * 0.05, s * 0.08);
-            g.fillCircle(s * 0.65, s * 0.05, s * 0.08);
-            // Arms
-            g.fillRoundedRect(s * 0.05, s * 0.25, s * 0.15, s * 0.35, 4);
-            g.fillRoundedRect(s * 0.8, s * 0.25, s * 0.15, s * 0.35, 4);
-            // Legs
-            g.fillRect(s * 0.2, s * 0.7, s * 0.18, s * 0.25);
-            g.fillRect(s * 0.62, s * 0.7, s * 0.18, s * 0.25);
-            // Eyes - angry
-            g.fillStyle(0xFF0000);
-            g.fillCircle(s * 0.42, s * 0.14, s * 0.04);
-            g.fillCircle(s * 0.58, s * 0.14, s * 0.04);
-            // Mouth
-            g.lineStyle(2, 0x440000);
-            g.beginPath(); g.moveTo(s * 0.4, s * 0.22); g.lineTo(s * 0.5, s * 0.25); g.lineTo(s * 0.6, s * 0.22); g.strokePath();
-        } else {
-            // Wolf/cat/raccoon - quadruped side view
-            g.fillRoundedRect(s * 0.15, s * 0.2, s * 0.55, s * 0.35, 5);
-            // Head
-            g.fillCircle(s * 0.78, s * 0.3, s * 0.18);
-            // Ears - pointy
-            const earDark = Phaser.Display.Color.ValueToColor(color).darken(30).color;
-            g.fillStyle(earDark);
-            g.fillTriangle(s * 0.7, s * 0.08, s * 0.76, s * 0.18, s * 0.64, s * 0.18);
-            g.fillTriangle(s * 0.85, s * 0.08, s * 0.9, s * 0.18, s * 0.78, s * 0.18);
-            // Legs
+        if (isFlying) {
+            // --- DRONE / GUNSHIP ---
+            // Central body
             g.fillStyle(color);
-            g.fillRect(s * 0.18, s * 0.5, s * 0.1, s * 0.3);
-            g.fillRect(s * 0.32, s * 0.5, s * 0.1, s * 0.3);
-            g.fillRect(s * 0.52, s * 0.5, s * 0.1, s * 0.3);
-            // Tail
-            g.lineStyle(4, earDark);
-            g.beginPath(); g.moveTo(s * 0.15, s * 0.28); g.lineTo(s * 0.02, s * 0.15); g.strokePath();
-            // Eye - angry red
-            g.fillStyle(0xFF2200);
-            g.fillCircle(s * 0.83, s * 0.27, s * 0.04);
-            // Fangs
-            g.fillStyle(0xFFFFFF);
-            g.fillTriangle(s * 0.88, s * 0.35, s * 0.92, s * 0.35, s * 0.9, s * 0.44);
+            g.fillRoundedRect(s * 0.3, s * 0.35, s * 0.4, s * 0.25, 4);
+            // Cockpit / sensor dome
+            g.fillStyle(0x222222);
+            g.fillRoundedRect(s * 0.38, s * 0.32, s * 0.24, s * 0.12, 6);
+            // Eye / sensor
+            g.fillStyle(0xFF0000);
+            g.fillCircle(s * 0.5, s * 0.38, s * 0.05);
+            // Wings / rotors
+            g.fillStyle(dark);
+            g.fillRect(s * 0.02, s * 0.4, s * 0.3, s * 0.06);
+            g.fillRect(s * 0.68, s * 0.4, s * 0.3, s * 0.06);
+            // Rotor circles
+            g.lineStyle(2, 0x888888, 0.7);
+            g.strokeCircle(s * 0.15, s * 0.43, s * 0.12);
+            g.strokeCircle(s * 0.85, s * 0.43, s * 0.12);
+            // Gun mount (gunship is bigger)
+            if (s > 40) {
+                g.fillStyle(0x444444);
+                g.fillRect(s * 0.42, s * 0.58, s * 0.16, s * 0.12);
+                g.fillRect(s * 0.46, s * 0.68, s * 0.08, s * 0.1);
+            }
+            // Antenna
+            g.lineStyle(2, 0xAAAAAA);
+            g.beginPath(); g.moveTo(s * 0.5, s * 0.32); g.lineTo(s * 0.5, s * 0.18); g.strokePath();
+            g.fillStyle(0xFF4400);
+            g.fillCircle(s * 0.5, s * 0.17, s * 0.03);
+        } else if (isBoss) {
+            // --- MEGA BOT --- upright, big, boxy
+            g.fillStyle(color);
+            g.fillRoundedRect(s * 0.2, s * 0.15, s * 0.6, s * 0.5, 6);
+            // Head
+            g.fillStyle(dark);
+            g.fillRoundedRect(s * 0.3, s * 0.02, s * 0.4, s * 0.18, 4);
+            // Eyes - glowing red
+            g.fillStyle(0xFF0000);
+            g.fillRect(s * 0.35, s * 0.07, s * 0.1, s * 0.06);
+            g.fillRect(s * 0.55, s * 0.07, s * 0.1, s * 0.06);
+            // Antenna
+            g.lineStyle(3, 0xAAAAAA);
+            g.beginPath(); g.moveTo(s * 0.5, s * 0.02); g.lineTo(s * 0.5, -s * 0.05); g.strokePath();
+            g.fillStyle(0xFF4400);
+            g.fillCircle(s * 0.5, -s * 0.05, s * 0.03);
+            // Arms - weapon arms
+            g.fillStyle(0x555555);
+            g.fillRoundedRect(s * 0.05, s * 0.2, s * 0.18, s * 0.4, 4);
+            g.fillRoundedRect(s * 0.77, s * 0.2, s * 0.18, s * 0.4, 4);
+            // Gun barrels on arms
+            g.fillStyle(0x333333);
+            g.fillRect(s * 0.08, s * 0.55, s * 0.12, s * 0.06);
+            g.fillRect(s * 0.8, s * 0.55, s * 0.12, s * 0.06);
+            // Legs - treads
+            g.fillStyle(0x444444);
+            g.fillRoundedRect(s * 0.2, s * 0.65, s * 0.2, s * 0.3, 4);
+            g.fillRoundedRect(s * 0.6, s * 0.65, s * 0.2, s * 0.3, 4);
+            // Tread lines
+            g.lineStyle(2, 0x333333);
+            for (let i = 0; i < 4; i++) {
+                const ty = s * 0.68 + i * s * 0.07;
+                g.beginPath(); g.moveTo(s * 0.22, ty); g.lineTo(s * 0.38, ty); g.strokePath();
+                g.beginPath(); g.moveTo(s * 0.62, ty); g.lineTo(s * 0.78, ty); g.strokePath();
+            }
+            // Chest panel
+            g.fillStyle(0x222222);
+            g.fillRect(s * 0.35, s * 0.25, s * 0.3, s * 0.15);
+            g.fillStyle(0x00FF00, 0.5);
+            g.fillRect(s * 0.37, s * 0.27, s * 0.06, s * 0.04);
+            g.fillStyle(0xFF0000, 0.5);
+            g.fillRect(s * 0.45, s * 0.27, s * 0.06, s * 0.04);
+        } else {
+            // --- GROUND BOTS --- side view, wheeled/treaded
+            // Body - boxy
+            g.fillStyle(color);
+            g.fillRoundedRect(s * 0.15, s * 0.15, s * 0.6, s * 0.4, 5);
+            // Head / sensor unit
+            g.fillStyle(dark);
+            g.fillRoundedRect(s * 0.6, s * 0.08, s * 0.25, s * 0.25, 4);
+            // Eye - glowing
+            g.fillStyle(0xFF0000);
+            g.fillCircle(s * 0.75, s * 0.18, s * 0.05);
+            g.fillStyle(0xFF4400, 0.4);
+            g.fillCircle(s * 0.75, s * 0.18, s * 0.08);
+            // Antenna
+            g.lineStyle(2, 0xAAAAAA);
+            g.beginPath(); g.moveTo(s * 0.7, s * 0.08); g.lineTo(s * 0.65, -s * 0.02); g.strokePath();
+            // Gun barrel
+            g.fillStyle(0x444444);
+            g.fillRect(s * 0.75, s * 0.28, s * 0.2, s * 0.06);
+            // Wheels / treads
+            g.fillStyle(0x333333);
+            g.fillCircle(s * 0.28, s * 0.6, s * 0.12);
+            g.fillCircle(s * 0.55, s * 0.6, s * 0.12);
+            g.fillStyle(0x555555);
+            g.fillCircle(s * 0.28, s * 0.6, s * 0.06);
+            g.fillCircle(s * 0.55, s * 0.6, s * 0.06);
+            // Tread connection
+            g.fillStyle(0x333333);
+            g.fillRect(s * 0.2, s * 0.55, s * 0.45, s * 0.1);
+            // Panel details
+            g.lineStyle(1, 0x000000, 0.3);
+            g.strokeRect(s * 0.2, s * 0.2, s * 0.15, s * 0.1);
+            g.strokeRect(s * 0.38, s * 0.2, s * 0.15, s * 0.1);
         }
 
         g.generateTexture(key, s, s);
@@ -343,6 +420,10 @@ class GameScene extends Phaser.Scene {
         this.enemiesAlive = 0;
         this.selectedRoom = -1;
         this.totalRoomsBuilt = 0;
+        this.bones = 0;
+        this.shieldMedals = 0;
+        this.lostDogActive = false;
+        this.lostDogRoom = -1;
         this.notifications = [];
         this.buildMenuOpen = false;
         this.roomPanelOpen = false;
@@ -366,18 +447,29 @@ class GameScene extends Phaser.Scene {
         this.setupInput();
         this.setupTimers();
 
-        // Give starter dog
-        this.addDog();
+        // Try loading saved game
+        const loaded = this.loadGame();
+
+        if (!loaded) {
+            // New game: give starter dogs
+            this.addDog();
+            this.addDog();
+            this.addDog();
+
+            this.time.delayedCall(600, () => {
+                this.showNotification('Welcome to Dog Fortress!', '#FFD700');
+                this.time.delayedCall(1500, () => {
+                    this.showNotification('Build rooms and assign dogs to them!', '#88CCFF');
+                });
+            });
+        }
 
         // Fade in
         this.cameras.main.fadeIn(500);
 
-        // Welcome notification
-        this.time.delayedCall(600, () => {
-            this.showNotification('Welcome to Dog Fortress!', '#FFD700');
-            this.time.delayedCall(1500, () => {
-                this.showNotification('Build rooms to earn coins!', '#88CCFF');
-            });
+        // Save when tab goes to background
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) this.saveGame();
         });
     }
 
@@ -541,6 +633,13 @@ class GameScene extends Phaser.Scene {
             stroke: '#000', strokeThickness: 2,
         }).setOrigin(1, 0);
         this.hudContainer.add(this.waveTimerText);
+
+        // Bones display
+        this.bonesText = this.add.text(GW / 2 + 60, 60, 'Bones: 0', {
+            fontFamily: 'Arial Black', fontSize: '28px', color: '#EEDDCC',
+            stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0, 0.5);
+        this.hudContainer.add(this.bonesText);
 
         // Collect all button - draw visuals, use zone for input
         const collectBtnGfx = this.add.graphics();
@@ -732,9 +831,9 @@ class GameScene extends Phaser.Scene {
 
         const panelBg = this.add.graphics();
         panelBg.fillStyle(0x2A1500, 0.95);
-        panelBg.fillRoundedRect(-GW / 2 + 20, -150, GW - 40, 300, 16);
+        panelBg.fillRoundedRect(-GW / 2 + 20, -170, GW - 40, 370, 16);
         panelBg.lineStyle(3, 0xDAA520);
-        panelBg.strokeRoundedRect(-GW / 2 + 20, -150, GW - 40, 300, 16);
+        panelBg.strokeRoundedRect(-GW / 2 + 20, -170, GW - 40, 370, 16);
         this.roomPanel.add(panelBg);
 
         this.rpName = this.add.text(0, -130, '', {
@@ -810,8 +909,22 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
         this.roomPanel.add(this.rpCollectText);
 
-        // Scene-level zones for room panel buttons (positioned for panel at GH - 180)
-        const rpOpenY = GH - 180; // panel y when open
+        // Repair button
+        const repairBg = this.add.graphics();
+        repairBg.fillStyle(0x2277CC);
+        repairBg.fillRoundedRect(-200, 155, 400, 55, 10);
+        repairBg.lineStyle(2, 0x44AAFF);
+        repairBg.strokeRoundedRect(-200, 155, 400, 55, 10);
+        this.roomPanel.add(repairBg);
+
+        this.rpRepairText = this.add.text(0, 182, 'Repair: 0c', {
+            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFF',
+            stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0.5);
+        this.roomPanel.add(this.rpRepairText);
+
+        // Scene-level zones for room panel buttons
+        const rpOpenY = GH - 210; // panel y when open
         const rpCX = GW / 2;     // panel center x
 
         this.rpUpgZone = this.add.zone(rpCX - 105, rpOpenY + 50, 190, 60)
@@ -838,11 +951,18 @@ class GameScene extends Phaser.Scene {
             if (this.roomPanelOpen && this.selectedRoom >= 0) this.collectCoins(this.selectedRoom);
         });
 
+        this.rpRepairZone = this.add.zone(rpCX, rpOpenY + 182, 400, 55)
+            .setDepth(530).setScrollFactor(0).setInteractive();
+        this.rpRepairZone.on('pointerup', () => {
+            if (this.roomPanelOpen) this.repairSelectedRoom();
+        });
+
         // Start all room panel zones disabled
         this.rpUpgZone.disableInteractive();
         this.rpAssignZone.disableInteractive();
         this.rpCloseZone.disableInteractive();
         this.rpCollectZone.disableInteractive();
+        this.rpRepairZone.disableInteractive();
     }
 
     // --- INPUT ---
@@ -882,11 +1002,15 @@ class GameScene extends Phaser.Scene {
     }
 
     handleRoomTap(worldX, worldY) {
+        // Skip if a dog sprite was just tapped
+        if (this.dogTapped) { this.dogTapped = false; return; }
         for (let i = 0; i < this.rooms.length; i++) {
             const room = this.rooms[i];
             const ry = this.getRoomY(i);
             if (worldX >= FORT_X && worldX <= FORT_X + ROOM_W &&
                 worldY >= ry && worldY <= ry + ROOM_H) {
+                // Check lost dog mission first
+                if (this.handleRoomTapForLostDog(i)) return;
                 this.selectRoom(i);
                 return;
             }
@@ -904,7 +1028,7 @@ class GameScene extends Phaser.Scene {
         });
 
         // Wave countdown
-        this.waveCountdown = 60;
+        this.waveCountdown = 45;
         this.time.addEvent({
             delay: 1000, loop: true,
             callback: () => this.waveCountdownTick(),
@@ -914,6 +1038,12 @@ class GameScene extends Phaser.Scene {
         this.time.addEvent({
             delay: 5000, loop: true,
             callback: () => this.tryRecruitDog(),
+        });
+
+        // Lost dog missions
+        this.time.addEvent({
+            delay: 60000, loop: true,
+            callback: () => this.tryLostDogMission(),
         });
 
         // Auto-save
@@ -941,6 +1071,8 @@ class GameScene extends Phaser.Scene {
         this.coins -= cost;
         this.totalRoomsBuilt++;
 
+        const baseMaxHp = ROOM_MAX_HP[def.category] || 100;
+        const buildTime = Math.min(120, 10 + this.totalRoomsBuilt * 5);
         const room = {
             type: typeKey,
             level: 1,
@@ -949,12 +1081,25 @@ class GameScene extends Phaser.Scene {
             lastFire: 0,
             container: null,
             coinIcon: null,
+            hp: baseMaxHp,
+            maxHp: baseMaxHp,
+            damageState: 0,
+            damageOverlay: null,
+            hpBarGfx: null,
+            constructing: true,
+            constructionTime: buildTime,
+            constructionLeft: buildTime,
+            constructionGfx: null,
+            constructionText: null,
         };
 
         const index = this.rooms.length;
         this.rooms.push(room);
 
         this.createRoomVisual(room, index);
+
+        // Add radial construction indicator
+        this.createConstructionIndicator(room);
 
         // Animate room appearing
         room.container.setScale(1, 0);
@@ -970,7 +1115,7 @@ class GameScene extends Phaser.Scene {
             scrollY: ry - GH / 2 + ROOM_H, duration: 600, ease: 'Power2',
         });
 
-        this.showNotification(`Built ${def.name}!`, '#44FF88');
+        this.showNotification(`Building ${def.name}... (${buildTime}s)`, '#FFAA44');
         this.updateHUD();
 
         // Close build menu
@@ -1080,7 +1225,117 @@ class GameScene extends Phaser.Scene {
             room.barrelSide = 1; // 1 = right, -1 = left
         }
 
+        // Dark "inactive" overlay — shown when no dogs assigned
+        const inactiveOverlay = this.add.graphics();
+        inactiveOverlay.fillStyle(0x000000, 0.55);
+        inactiveOverlay.fillRect(-ROOM_W / 2, -ROOM_H / 2, ROOM_W, ROOM_H);
+        container.add(inactiveOverlay);
+        room.inactiveOverlay = inactiveOverlay;
+
         room.container = container;
+    }
+
+    updateRoomActiveState(room) {
+        const active = room.dogs.length > 0 && !room.constructing;
+        if (room.inactiveOverlay) room.inactiveOverlay.setVisible(!active);
+    }
+
+    createConstructionIndicator(room) {
+        // Grey out the room during construction
+        const greyOverlay = this.add.graphics();
+        greyOverlay.fillStyle(0x555566, 0.65);
+        greyOverlay.fillRect(-ROOM_W / 2, -ROOM_H / 2, ROOM_W, ROOM_H);
+        room.container.add(greyOverlay);
+        room.constructionOverlay = greyOverlay;
+
+        // Radial arc
+        const g = this.add.graphics();
+        room.constructionGfx = g;
+        room.container.add(g);
+
+        // Countdown number
+        const t = this.add.text(0, 0, '', {
+            fontFamily: 'Arial Black', fontSize: '32px', color: '#FFFFFF',
+            stroke: '#000', strokeThickness: 5,
+        }).setOrigin(0.5);
+        room.constructionText = t;
+        room.container.add(t);
+
+        this.drawConstructionArc(room);
+    }
+
+    drawConstructionArc(room) {
+        if (!room.constructionGfx) return;
+        const g = room.constructionGfx;
+        g.clear();
+
+        const r = 45;
+        const progress = 1 - (room.constructionLeft / room.constructionTime);
+
+        // Background circle
+        g.fillStyle(0x000000, 0.6);
+        g.fillCircle(0, 0, r + 4);
+
+        // Track ring
+        g.lineStyle(8, 0x333333);
+        g.beginPath();
+        g.arc(0, 0, r, 0, Math.PI * 2);
+        g.strokePath();
+
+        // Progress arc (clockwise from top)
+        if (progress > 0) {
+            g.lineStyle(8, 0xFF8800);
+            g.beginPath();
+            g.arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+            g.strokePath();
+        }
+
+        if (room.constructionText) {
+            room.constructionText.setText(`${Math.ceil(room.constructionLeft)}`);
+        }
+    }
+
+    finishConstruction(room, index) {
+        room.constructing = false;
+        room.constructionLeft = 0;
+
+        // Remove construction visuals
+        if (room.constructionOverlay) { room.constructionOverlay.destroy(); room.constructionOverlay = null; }
+        if (room.constructionGfx) { room.constructionGfx.destroy(); room.constructionGfx = null; }
+        if (room.constructionText) { room.constructionText.destroy(); room.constructionText = null; }
+
+        // Update overlay (still needs dog)
+        this.updateRoomActiveState(room);
+
+        // Celebration
+        const ry = this.getRoomY(index);
+        this.spawnParticles(FORT_CX, ry + ROOM_H / 2, 0x44FF88, 20);
+        this.showNotification(`${ROOM_DEFS[room.type].name} complete!`, '#44FF88');
+
+        // Flash
+        if (room.container) {
+            this.tweens.add({
+                targets: room.container, scaleX: 1.05, scaleY: 1.05,
+                duration: 150, yoyo: true, ease: 'Power2',
+            });
+        }
+    }
+
+    speedUpConstruction() {
+        if (this.selectedRoom < 0) return;
+        const room = this.rooms[this.selectedRoom];
+        if (!room || !room.constructing) return;
+
+        const cost = Math.ceil(room.constructionLeft / 5);
+        if (this.bones < cost) {
+            this.showNotification('Not enough Bones!', '#FF4444');
+            return;
+        }
+
+        this.bones -= cost;
+        this.finishConstruction(room, this.selectedRoom);
+        this.updateHUD();
+        this.hideRoomPanel();
     }
 
     drawRoomDetails(container, type, w, h) {
@@ -1242,12 +1497,25 @@ class GameScene extends Phaser.Scene {
 
     // --- ECONOMY ---
     economyTick() {
+        // Construction progress
+        this.rooms.forEach((room, i) => {
+            if (!room.constructing) return;
+            room.constructionLeft--;
+            this.drawConstructionArc(room);
+            if (room.constructionLeft <= 0) {
+                this.finishConstruction(room, i);
+            }
+        });
+
         this.rooms.forEach((room, i) => {
             const def = ROOM_DEFS[room.type];
             if (def.baseIncome <= 0) return;
+            if (room.constructing) return; // under construction
+            if (room.dogs.length === 0) return; // rooms need a dog to operate
 
-            const dogBonus = 1 + room.dogs.length * 0.15;
-            const income = def.baseIncome * room.level * dogBonus;
+            const dogBonus = this.getRoomDogBonus(room);
+            const hpMult = 0.1 + 0.9 * (room.hp / room.maxHp);
+            const income = def.baseIncome * room.level * dogBonus * hpMult * this.getPrestigeMultiplier();
             room.accumulated += income;
 
             // Update coin indicator
@@ -1260,6 +1528,24 @@ class GameScene extends Phaser.Scene {
                     room.coinIcon.setAlpha(0);
                 }
             }
+        });
+
+        // Dog auto-repair: dogs heal their room based on repair skill
+        this.rooms.forEach((room, i) => {
+            if (room.hp >= room.maxHp) return;
+            const repairRate = this.getRoomRepairRate(room);
+            if (repairRate <= 0) return;
+
+            const oldState = room.damageState;
+            room.hp = Math.min(room.maxHp, room.hp + repairRate);
+
+            const hpPct = room.hp / room.maxHp;
+            room.damageState = hpPct > 0.75 ? 0 : hpPct > 0.5 ? 1 : hpPct > 0.25 ? 2 : 3;
+
+            if (room.damageState !== oldState) {
+                this.updateRoomDamageVisual(room);
+            }
+            this.updateRoomHpBar(room);
         });
     }
 
@@ -1337,7 +1623,7 @@ class GameScene extends Phaser.Scene {
         this.updateRoomPanel();
 
         this.tweens.add({
-            targets: this.roomPanel, y: GH - 180,
+            targets: this.roomPanel, y: GH - 210,
             duration: 300, ease: 'Power2',
         });
 
@@ -1349,6 +1635,7 @@ class GameScene extends Phaser.Scene {
         this.rpAssignZone.setInteractive();
         this.rpCloseZone.setInteractive();
         this.rpCollectZone.setInteractive();
+        this.rpRepairZone.setInteractive();
 
         // Highlight selected room
         const room = this.rooms[this.selectedRoom];
@@ -1366,25 +1653,65 @@ class GameScene extends Phaser.Scene {
         if (!room) return;
         const def = ROOM_DEFS[room.type];
 
+        // --- UNDER CONSTRUCTION ---
+        if (room.constructing) {
+            this.rpName.setText(def.name);
+            this.rpLevel.setText('Under Construction');
+            this.rpLevel.setColor('#FFAA44');
+            this.rpStats.setText(`Time remaining: ${Math.ceil(room.constructionLeft)}s`);
+            this.rpDogs.setText('');
+            this.rpUpgText.setText('');
+            this.rpAssignText.setText('');
+            this.rpCollectText.setText('');
+            const speedCost = Math.ceil(room.constructionLeft / 5);
+            this.rpRepairText.setText(`Speed Up: ${speedCost} Bones`);
+            this.rpRepairText.setColor(this.bones >= speedCost ? '#FFFFFF' : '#FF4444');
+            return;
+        }
+
+        // --- NORMAL ---
+        const hpMult = 0.1 + 0.9 * (room.hp / room.maxHp);
+        const hpPct = Math.floor((room.hp / room.maxHp) * 100);
+
         this.rpName.setText(def.name);
-        this.rpLevel.setText(`Level ${room.level}`);
+        this.rpLevel.setText(`Level ${room.level}  |  HP: ${room.hp}/${room.maxHp} (${hpPct}%)`);
+        const hpColor = hpPct > 75 ? '#CCCCCC' : hpPct > 50 ? '#FFAA44' : hpPct > 25 ? '#FF8844' : '#FF4444';
+        this.rpLevel.setColor(hpColor);
 
         if (def.category === 'turret') {
-            const dmg = def.baseDamage * room.level * (1 + room.dogs.length * 0.2);
-            this.rpStats.setText(`Damage: ${Math.floor(dmg)}  |  Rate: ${(def.fireRate / 1000).toFixed(1)}s  |  Range: ${def.range}`);
+            const dmg = Math.floor(def.baseDamage * room.level * this.getRoomDogBonus(room) * hpMult);
+            this.rpStats.setText(`Damage: ${dmg}  |  Rate: ${(def.fireRate / 1000).toFixed(1)}s  |  Range: ${def.range}`);
         } else if (def.baseIncome > 0) {
-            const dogBonus = 1 + room.dogs.length * 0.15;
-            const income = def.baseIncome * room.level * dogBonus;
+            const dogBonus = this.getRoomDogBonus(room);
+            const income = def.baseIncome * room.level * dogBonus * hpMult * this.getPrestigeMultiplier();
             this.rpStats.setText(`Income: ${income.toFixed(1)}/s  |  Stored: ${Math.floor(room.accumulated)}`);
         } else {
             this.rpStats.setText(def.desc);
         }
 
-        this.rpDogs.setText(`Dogs: ${room.dogs.length} assigned`);
+        const roomSkill = ROOM_SKILL_MAP[room.type] || 'production';
+        const dreamCount = room.dogs.filter(d => d.dreamSkill === roomSkill).length;
+        const repairRate = this.getRoomRepairRate(room);
+        let dogInfo = `Dogs: ${room.dogs.length}`;
+        if (dreamCount > 0) dogInfo += ` (${dreamCount} in dream room)`;
+        if (repairRate > 0) dogInfo += ` | Repair: ${repairRate.toFixed(1)} HP/s`;
+        this.rpDogs.setText(dogInfo);
 
         const upgCost = this.getUpgradeCost(room);
         this.rpUpgText.setText(`Upgrade: ${upgCost}c`);
+        this.rpAssignText.setText('Assign Dog');
         this.rpCollectText.setText(`Collect: ${Math.floor(room.accumulated)}c`);
+
+        // Repair button
+        const costPerHp = def.baseCost / 100;
+        const repairCost = Math.ceil((room.maxHp - room.hp) * costPerHp);
+        if (room.hp >= room.maxHp) {
+            this.rpRepairText.setText('Full Health');
+            this.rpRepairText.setColor('#88FF88');
+        } else {
+            this.rpRepairText.setText(`Repair: ${repairCost}c`);
+            this.rpRepairText.setColor(this.coins >= repairCost ? '#FFFFFF' : '#FF4444');
+        }
     }
 
     hideRoomPanel() {
@@ -1403,6 +1730,7 @@ class GameScene extends Phaser.Scene {
         this.rpAssignZone.disableInteractive();
         this.rpCloseZone.disableInteractive();
         this.rpCollectZone.disableInteractive();
+        this.rpRepairZone.disableInteractive();
     }
 
     // --- UPGRADES ---
@@ -1424,6 +1752,10 @@ class GameScene extends Phaser.Scene {
         this.coins -= cost;
         room.level++;
 
+        // Increase maxHp on upgrade
+        const baseMaxHp = ROOM_MAX_HP[ROOM_DEFS[room.type].category] || 100;
+        room.maxHp = baseMaxHp + (room.level - 1) * ROOM_HP_PER_LEVEL;
+
         // Update visual
         room.lvlText.setText(`Lv.${room.level}`);
 
@@ -1440,6 +1772,42 @@ class GameScene extends Phaser.Scene {
         this.spawnParticles(FORT_CX, ry + ROOM_H / 2, 0xFFD700, 15);
 
         this.showNotification(`Upgraded to Lv.${room.level}!`, '#44FF88');
+        this.updateHUD();
+        this.updateRoomPanel();
+    }
+
+    repairSelectedRoom() {
+        if (this.selectedRoom < 0) return;
+        const room = this.rooms[this.selectedRoom];
+
+        // Double-duty: speed up construction if constructing
+        if (room.constructing) {
+            this.speedUpConstruction();
+            return;
+        }
+
+        if (room.hp >= room.maxHp) {
+            this.showNotification('Room is at full health!', '#88CCFF');
+            return;
+        }
+        const def = ROOM_DEFS[room.type];
+        const costPerHp = def.baseCost / 100;
+        const repairCost = Math.ceil((room.maxHp - room.hp) * costPerHp);
+
+        if (this.coins < repairCost) {
+            this.showNotification('Not enough coins!', '#FF4444');
+            return;
+        }
+
+        this.coins -= repairCost;
+        room.hp = room.maxHp;
+        room.damageState = 0;
+        this.updateRoomDamageVisual(room);
+        this.updateRoomHpBar(room);
+
+        const ry = this.getRoomY(this.selectedRoom);
+        this.spawnParticles(FORT_CX, ry + ROOM_H / 2, 0x44AAFF, 15);
+        this.showNotification('Room repaired!', '#44AAFF');
         this.updateHUD();
         this.updateRoomPanel();
     }
@@ -1491,11 +1859,24 @@ class GameScene extends Phaser.Scene {
         const breedIndex = DOG_BREEDS.indexOf(breed);
         const name = DOG_NAMES[Phaser.Math.Between(0, DOG_NAMES.length - 1)];
 
+        // Generate skills (1-5). Affinity skill gets +2 bonus (capped at 5)
+        const rollSkill = (isAffinity) => {
+            const base = Phaser.Math.Between(1, isAffinity ? 5 : 3);
+            return Math.min(5, base + (isAffinity ? 1 : 0));
+        };
+        const skills = {
+            combat: rollSkill(breed.affinity === 'combat'),
+            production: rollSkill(breed.affinity === 'production'),
+            repair: rollSkill(breed.affinity === 'repair'),
+            communication: rollSkill(breed.affinity === 'communication'),
+        };
+
+        // Dream room = skill category where this dog is strongest
+        const bestSkill = Object.keys(skills).reduce((a, b) => skills[a] >= skills[b] ? a : b);
+
         const dog = {
-            name: name,
-            breed: breed.name,
-            breedIndex: breedIndex,
-            bonus: breed.bonus,
+            name, breed: breed.name, breedIndex,
+            skills, dreamSkill: bestSkill,
             assignedRoom: -1,
             sprite: null,
         };
@@ -1505,9 +1886,31 @@ class GameScene extends Phaser.Scene {
         return dog;
     }
 
+    // Calculate total dog bonus for a room. Dream room dogs give 2x.
+    getRoomDogBonus(room) {
+        const roomSkill = ROOM_SKILL_MAP[room.type] || 'production';
+        let bonus = 1;
+        room.dogs.forEach(dog => {
+            const skill = dog.skills ? (dog.skills[roomSkill] || 1) : 1;
+            const isDream = dog.dreamSkill === roomSkill;
+            bonus += (skill * 0.04) * (isDream ? 2 : 1); // 4-20% per skill point, doubled for dream
+        });
+        return bonus;
+    }
+
+    // Calculate total repair rate for a room from dogs' repair skill
+    getRoomRepairRate(room) {
+        let rate = 0;
+        room.dogs.forEach(dog => {
+            const repairSkill = dog.skills ? dog.skills.repair : 0;
+            rate += repairSkill * 0.5; // 0.5 HP/s per repair skill point
+        });
+        return rate;
+    }
+
     tryRecruitDog() {
         // Need a radio tower
-        const radioRooms = this.rooms.filter(r => r.type === 'radio');
+        const radioRooms = this.rooms.filter(r => r.type === 'radio' && r.dogs.length > 0);
         if (radioRooms.length === 0) return;
 
         // Higher chance with more/better radio rooms
@@ -1528,41 +1931,393 @@ class GameScene extends Phaser.Scene {
     }
 
     assignDogToSelectedRoom() {
-        if (this.selectedRoom < 0) return;
-        const room = this.rooms[this.selectedRoom];
+        // Open the dog picker instead of auto-assigning
+        this.showDogPicker();
+    }
 
-        // Find unassigned dog
-        const freeDog = this.dogs.find(d => d.assignedRoom === -1);
-        if (!freeDog) {
-            this.showNotification('No free dogs! Build a Radio Tower.', '#FF8844');
+    // --- DOG INFO POPUP ---
+    showDogInfo(dog) {
+        // Remove existing popup if any
+        if (this.dogInfoPopup) this.dogInfoPopup.destroy();
+
+        const s = dog.skills || { combat: 1, production: 1, repair: 1, communication: 1 };
+        const roomSkill = dog.assignedRoom >= 0 ? (ROOM_SKILL_MAP[this.rooms[dog.assignedRoom]?.type] || '') : '';
+        const isDream = roomSkill && dog.dreamSkill === roomSkill;
+
+        // Build popup as a container fixed to camera
+        const popup = this.add.container(GW / 2, GH / 2).setDepth(700).setScrollFactor(0);
+        this.dogInfoPopup = popup;
+
+        // Dim background
+        const dim = this.add.graphics();
+        dim.fillStyle(0x000000, 0.5);
+        dim.fillRect(-GW / 2, -GH / 2, GW, GH);
+        popup.add(dim);
+
+        // Panel
+        const panel = this.add.graphics();
+        panel.fillStyle(0x2A1500, 0.95);
+        panel.fillRoundedRect(-280, -220, 560, 440, 20);
+        panel.lineStyle(3, 0xDAA520);
+        panel.strokeRoundedRect(-280, -220, 560, 440, 20);
+        popup.add(panel);
+
+        // Dog name & breed
+        const nameText = this.add.text(0, -190, `${dog.name}`, {
+            fontFamily: 'Arial Black', fontSize: '38px', color: '#FFD700',
+            stroke: '#000', strokeThickness: 5,
+        }).setOrigin(0.5);
+        popup.add(nameText);
+
+        const breedText = this.add.text(0, -145, `${dog.breed}`, {
+            fontFamily: 'Arial', fontSize: '28px', color: '#C4813D',
+            stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0.5);
+        popup.add(breedText);
+
+        if (isDream) {
+            const dreamText = this.add.text(0, -110, 'IN DREAM ROOM! x2 BONUS', {
+                fontFamily: 'Arial Black', fontSize: '24px', color: '#FFD700',
+                stroke: '#000', strokeThickness: 3,
+            }).setOrigin(0.5);
+            popup.add(dreamText);
+        }
+
+        // Skills as bars
+        const skillNames = [
+            { key: 'combat', label: 'Combat', color: 0xFF4444 },
+            { key: 'production', label: 'Production', color: 0x44CC44 },
+            { key: 'repair', label: 'Repair', color: 0x44AAFF },
+            { key: 'communication', label: 'Comms', color: 0xCC88FF },
+        ];
+        const barStartY = -70;
+
+        skillNames.forEach((sk, i) => {
+            const y = barStartY + i * 65;
+            const val = s[sk.key] || 1;
+            const isRoomSkill = sk.key === roomSkill;
+
+            // Label
+            const label = this.add.text(-240, y, sk.label, {
+                fontFamily: 'Arial Black', fontSize: '24px',
+                color: isRoomSkill ? '#FFFFFF' : '#AAAAAA',
+                stroke: '#000', strokeThickness: 3,
+            }).setOrigin(0, 0.5);
+            popup.add(label);
+
+            // Bar background
+            const barBg = this.add.graphics();
+            barBg.fillStyle(0x333333);
+            barBg.fillRoundedRect(-30, y - 12, 260, 24, 6);
+            popup.add(barBg);
+
+            // Bar fill
+            const barFill = this.add.graphics();
+            barFill.fillStyle(sk.color);
+            barFill.fillRoundedRect(-30, y - 12, (260 * val / 5), 24, 6);
+            popup.add(barFill);
+
+            // Value text
+            const valText = this.add.text(240, y, `${val}/5`, {
+                fontFamily: 'Arial Black', fontSize: '22px', color: '#FFFFFF',
+                stroke: '#000', strokeThickness: 3,
+            }).setOrigin(0.5);
+            popup.add(valText);
+
+            // Dream indicator
+            if (sk.key === dog.dreamSkill) {
+                const star = this.add.text(-260, y, '*', {
+                    fontFamily: 'Arial Black', fontSize: '28px', color: '#FFD700',
+                    stroke: '#000', strokeThickness: 3,
+                }).setOrigin(0.5);
+                popup.add(star);
+            }
+        });
+
+        // Unassign button (only if dog is assigned)
+        if (dog.assignedRoom >= 0) {
+            const unBg = this.add.graphics();
+            unBg.fillStyle(0x993333);
+            unBg.fillRoundedRect(-150, 160, 300, 55, 10);
+            unBg.lineStyle(2, 0xCC4444);
+            unBg.strokeRoundedRect(-150, 160, 300, 55, 10);
+            popup.add(unBg);
+
+            const unText = this.add.text(0, 187, 'Unassign Dog', {
+                fontFamily: 'Arial Black', fontSize: '26px', color: '#FFFFFF',
+                stroke: '#000', strokeThickness: 3,
+            }).setOrigin(0.5);
+            popup.add(unText);
+        } else {
+            const closeText = this.add.text(0, 190, 'TAP TO CLOSE', {
+                fontFamily: 'Arial Black', fontSize: '26px', color: '#AAAAAA',
+                stroke: '#000', strokeThickness: 3,
+            }).setOrigin(0.5);
+            popup.add(closeText);
+        }
+
+        // Scene-level zones for close + unassign
+        this.dogInfoCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
+            .setDepth(699).setScrollFactor(0).setInteractive();
+
+        if (dog.assignedRoom >= 0) {
+            // Unassign zone on top of the button area
+            this.dogInfoUnassignZone = this.add.zone(GW / 2, GH / 2 + 187, 300, 55)
+                .setDepth(701).setScrollFactor(0).setInteractive();
+            this.dogInfoUnassignZone.on('pointerup', () => {
+                this.unassignDog(dog);
+                this.closeDogInfo();
+            });
+        }
+
+        this.dogInfoCloseZone.on('pointerup', () => this.closeDogInfo());
+
+        // Entrance animation
+        popup.setScale(0.8).setAlpha(0);
+        this.tweens.add({
+            targets: popup, scaleX: 1, scaleY: 1, alpha: 1,
+            duration: 200, ease: 'Back.easeOut',
+        });
+    }
+
+    closeDogInfo() {
+        if (this.dogInfoPopup) { this.dogInfoPopup.destroy(); this.dogInfoPopup = null; }
+        if (this.dogInfoCloseZone) { this.dogInfoCloseZone.destroy(); this.dogInfoCloseZone = null; }
+        if (this.dogInfoUnassignZone) { this.dogInfoUnassignZone.destroy(); this.dogInfoUnassignZone = null; }
+    }
+
+    unassignDog(dog) {
+        if (dog.assignedRoom < 0) return;
+        const room = this.rooms[dog.assignedRoom];
+        if (room) {
+            const idx = room.dogs.indexOf(dog);
+            if (idx >= 0) room.dogs.splice(idx, 1);
+            this.updateRoomActiveState(room);
+        }
+        if (dog.sprite) { dog.sprite.destroy(); dog.sprite = null; }
+        dog.assignedRoom = -1;
+        this.showNotification(`${dog.name} unassigned!`, '#AAAAAA');
+        if (this.roomPanelOpen) this.updateRoomPanel();
+    }
+
+    // --- DOG PICKER (for assigning) ---
+    showDogPicker() {
+        if (this.selectedRoom < 0) return;
+        const targetRoomIndex = this.selectedRoom;
+        const room = this.rooms[targetRoomIndex];
+
+        if (room.constructing) {
+            this.showNotification('Room is still under construction!', '#FF8844');
             return;
         }
 
-        // Max 3 dogs per room
         if (room.dogs.length >= 3) {
             this.showNotification('Room is full! (max 3 dogs)', '#FF8844');
             return;
         }
 
-        freeDog.assignedRoom = this.selectedRoom;
-        room.dogs.push(freeDog);
+        const freeDogs = this.dogs.filter(d => d.assignedRoom === -1);
+        if (freeDogs.length === 0) {
+            this.showNotification('No free dogs! Build a Radio Tower.', '#FF8844');
+            return;
+        }
 
-        // Add dog sprite inside room
-        const ry = this.getRoomY(this.selectedRoom);
+        if (this.roomPanelOpen) this.hideRoomPanel();
+
+        const roomSkill = ROOM_SKILL_MAP[room.type] || 'production';
+
+        // Sort: dream matches first, then by relevant skill descending
+        freeDogs.sort((a, b) => {
+            const aDream = a.dreamSkill === roomSkill ? 1 : 0;
+            const bDream = b.dreamSkill === roomSkill ? 1 : 0;
+            if (bDream !== aDream) return bDream - aDream;
+            return (b.skills?.[roomSkill] || 1) - (a.skills?.[roomSkill] || 1);
+        });
+
+        const popup = this.add.container(GW / 2, GH / 2).setDepth(700).setScrollFactor(0);
+        this.dogPickerPopup = popup;
+
+        // Dim background
+        const dim = this.add.graphics();
+        dim.fillStyle(0x000000, 0.6);
+        dim.fillRect(-GW / 2, -GH / 2, GW, GH);
+        popup.add(dim);
+
+        // Skill color map
+        const SKILL_COLORS = { combat: '#FF5555', production: '#55CC55', repair: '#55AAFF', communication: '#CC88FF' };
+
+        // Card layout
+        const maxVisible = Math.min(freeDogs.length, 4);
+        const ROW_H = 120;
+        const panelW = GW - 60;
+        const panelH = 110 + maxVisible * ROW_H + (freeDogs.length > maxVisible ? 50 : 0);
+        const panelTop = -panelH / 2;
+
+        // Panel
+        const panel = this.add.graphics();
+        panel.fillStyle(0x1A0A00, 0.95);
+        panel.fillRoundedRect(-panelW / 2, panelTop, panelW, panelH, 16);
+        panel.lineStyle(3, 0xDAA520);
+        panel.strokeRoundedRect(-panelW / 2, panelTop, panelW, panelH, 16);
+        popup.add(panel);
+
+        // Title
+        popup.add(this.add.text(0, panelTop + 25, 'Choose a Dog', {
+            fontFamily: 'Arial Black', fontSize: '34px', color: '#FFD700',
+            stroke: '#000', strokeThickness: 5,
+        }).setOrigin(0.5));
+
+        // Column headers
+        const headerY = panelTop + 70;
+        const colX = { name: -panelW / 2 + 30, com: 80, pro: 200, rep: 320, cmm: 440 };
+        const hdrs = [
+            { x: colX.com, label: 'Combat', skill: 'combat', color: SKILL_COLORS.combat },
+            { x: colX.pro, label: 'Produce', skill: 'production', color: SKILL_COLORS.production },
+            { x: colX.rep, label: 'Repair', skill: 'repair', color: SKILL_COLORS.repair },
+            { x: colX.cmm, label: 'Comms', skill: 'communication', color: SKILL_COLORS.communication },
+        ];
+        hdrs.forEach(h => {
+            const isNeeded = h.skill === roomSkill;
+            popup.add(this.add.text(h.x, headerY, h.label, {
+                fontFamily: 'Arial Black', fontSize: '26px',
+                color: isNeeded ? '#FFFFFF' : '#999999',
+                stroke: '#000', strokeThickness: 4,
+            }).setOrigin(0.5));
+            if (isNeeded) {
+                // Underline the needed skill
+                const underline = this.add.graphics();
+                underline.lineStyle(3, 0xFFD700);
+                underline.beginPath(); underline.moveTo(h.x - 30, headerY + 15); underline.lineTo(h.x + 30, headerY + 15); underline.strokePath();
+                popup.add(underline);
+            }
+        });
+
+        // Dog rows
+        this.dogPickerZones = [];
+        const listTop = panelTop + 95;
+
+        for (let i = 0; i < maxVisible; i++) {
+            const dog = freeDogs[i];
+            const y = listTop + i * ROW_H + ROW_H / 2;
+            const s = dog.skills || {};
+            const isDream = dog.dreamSkill === roomSkill;
+
+            // Row bg
+            const row = this.add.graphics();
+            row.fillStyle(isDream ? 0x3D2800 : 0x2A1A0A);
+            row.fillRoundedRect(-panelW / 2 + 15, y - ROW_H / 2 + 4, panelW - 30, ROW_H - 8, 10);
+            if (isDream) {
+                row.lineStyle(3, 0xFFD700, 0.7);
+                row.strokeRoundedRect(-panelW / 2 + 15, y - ROW_H / 2 + 4, panelW - 30, ROW_H - 8, 10);
+            }
+            popup.add(row);
+
+            // Dog sprite
+            popup.add(this.add.image(-panelW / 2 + 60, y, 'dog_' + dog.breedIndex).setScale(1.5));
+
+            // Name + breed
+            popup.add(this.add.text(-panelW / 2 + 100, y - 25, dog.name, {
+                fontFamily: 'Arial Black', fontSize: '28px', color: '#FFFFFF',
+                stroke: '#000', strokeThickness: 4,
+            }));
+            popup.add(this.add.text(-panelW / 2 + 100, y + 10, dog.breed + (isDream ? '  DREAM!' : ''), {
+                fontFamily: 'Arial Black', fontSize: '24px', color: isDream ? '#FFD700' : '#C4813D',
+                stroke: '#000', strokeThickness: 3,
+            }));
+
+            // 4 skill numbers, color-coded, bigger if it's the room's needed skill
+            const skillKeys = ['combat', 'production', 'repair', 'communication'];
+            const skillXs = [colX.com, colX.pro, colX.rep, colX.cmm];
+            skillKeys.forEach((sk, j) => {
+                const val = s[sk] || 1;
+                const isNeeded = sk === roomSkill;
+                const color = SKILL_COLORS[sk];
+                popup.add(this.add.text(skillXs[j], y, `${val}`, {
+                    fontFamily: 'Arial Black',
+                    fontSize: isNeeded ? '38px' : '28px',
+                    color: color,
+                    stroke: '#000',
+                    strokeThickness: isNeeded ? 5 : 3,
+                }).setOrigin(0.5));
+            });
+
+            // Scene-level zone
+            const zone = this.add.zone(GW / 2, GH / 2 + y, panelW - 30, ROW_H - 8)
+                .setDepth(701).setScrollFactor(0).setInteractive();
+            zone.on('pointerdown', () => row.setAlpha(0.6));
+            zone.on('pointerup', () => {
+                row.setAlpha(1);
+                this.closeDogPicker();
+                this.assignSpecificDog(dog, targetRoomIndex);
+            });
+            zone.on('pointerout', () => row.setAlpha(1));
+            this.dogPickerZones.push(zone);
+        }
+
+        if (freeDogs.length > maxVisible) {
+            popup.add(this.add.text(0, listTop + maxVisible * ROW_H + 15, `+${freeDogs.length - maxVisible} more`, {
+                fontFamily: 'Arial', fontSize: '24px', color: '#888888',
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5));
+        }
+
+        // Close zone
+        this.dogPickerCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
+            .setDepth(699).setScrollFactor(0).setInteractive();
+        this.dogPickerCloseZone.on('pointerup', () => this.closeDogPicker());
+
+        popup.setScale(0.8).setAlpha(0);
+        this.tweens.add({
+            targets: popup, scaleX: 1, scaleY: 1, alpha: 1,
+            duration: 200, ease: 'Back.easeOut',
+        });
+    }
+
+    closeDogPicker() {
+        if (this.dogPickerPopup) { this.dogPickerPopup.destroy(); this.dogPickerPopup = null; }
+        if (this.dogPickerCloseZone) { this.dogPickerCloseZone.destroy(); this.dogPickerCloseZone = null; }
+        if (this.dogPickerZones) {
+            this.dogPickerZones.forEach(z => z.destroy());
+            this.dogPickerZones = null;
+        }
+    }
+
+    assignSpecificDog(dog, roomIndex) {
+        if (roomIndex < 0 || roomIndex >= this.rooms.length) return;
+        const room = this.rooms[roomIndex];
+        if (room.dogs.length >= 3) return;
+
+        dog.assignedRoom = roomIndex;
+        room.dogs.push(dog);
+
+        // Add sprite
+        const ry = this.getRoomY(roomIndex);
         const dogX = FORT_CX - ROOM_W / 3 + room.dogs.length * 80;
-        const dogSprite = this.add.image(dogX, ry + ROOM_H - 25, 'dog_' + freeDog.breedIndex);
-        dogSprite.setScale(1.5).setDepth(25);
-        freeDog.sprite = dogSprite;
+        const dogSprite = this.add.image(dogX, ry + ROOM_H - 25, 'dog_' + dog.breedIndex);
+        dogSprite.setScale(1.5).setDepth(25).setInteractive();
+        dog.sprite = dogSprite;
 
-        // Idle animation
+        dogSprite.on('pointerup', () => {
+            if (!this.isDragging) { this.dogTapped = true; this.showDogInfo(dog); }
+        });
+
         this.tweens.add({
             targets: dogSprite, x: dogX + 30,
             duration: Phaser.Math.Between(1500, 2500),
             yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         });
 
-        this.showNotification(`${freeDog.name} assigned!`, '#C4813D');
-        this.updateRoomPanel();
+        const roomSkill = ROOM_SKILL_MAP[room.type] || 'production';
+        const isDream = dog.dreamSkill === roomSkill;
+        if (isDream) {
+            this.showNotification(`${dog.name} is in their DREAM ROOM! x2 bonus!`, '#FFD700');
+            this.spawnParticles(dogX, ry + ROOM_H - 25, 0xFFD700, 10);
+            this.bones += 2;
+            this.updateHUD();
+        } else {
+            this.showNotification(`${dog.name} assigned!`, '#C4813D');
+        }
+        this.updateRoomActiveState(room);
     }
 
     // --- WAVES / COMBAT ---
@@ -1604,18 +2359,22 @@ class GameScene extends Phaser.Scene {
         });
 
         // Determine enemies for this wave
-        const numEnemies = Math.min(3 + this.wave * 2, 30);
+        const numEnemies = Math.min(4 + this.wave * 2, 40);
         this.enemiesAlive = numEnemies;
 
-        const spawnDelay = Math.max(400, 2000 - this.wave * 50);
+        const spawnDelay = Math.max(300, 1800 - this.wave * 60);
 
         for (let i = 0; i < numEnemies; i++) {
             this.time.delayedCall(i * spawnDelay, () => {
-                let type = 'wolf';
+                let type = 'scout';
                 const roll = Math.random();
-                if (this.wave >= 3 && roll < 0.3) type = 'cat';
-                if (this.wave >= 5 && roll < 0.15) type = 'raccoon';
-                if (this.wave >= 8 && this.wave % 5 === 0 && i === numEnemies - 1) type = 'bear';
+                if (this.wave >= 6 && roll < 0.10) type = 'gunship';
+                else if (this.wave >= 5 && roll < 0.15) type = 'tank';
+                else if (this.wave >= 4 && roll < 0.25) type = 'drone';
+                else if (this.wave >= 3 && roll < 0.35) type = 'assault';
+
+                // Boss mega bot on wave milestones
+                if (this.wave >= 8 && this.wave % 5 === 0 && i === numEnemies - 1) type = 'mega';
 
                 const side = Math.random() < 0.5 ? 'left' : 'right';
                 this.spawnEnemy(type, side);
@@ -1625,24 +2384,33 @@ class GameScene extends Phaser.Scene {
 
     spawnEnemy(type, side) {
         const def = ENEMY_DEFS[type];
-        const hpScale = 1 + (this.wave - 1) * 0.2;
-        const speedScale = 1 + (this.wave - 1) * 0.05;
+        const hpScale = 1 + (this.wave - 1) * 0.25;
+        const speedScale = 1 + (this.wave - 1) * 0.07;
 
         const texKey = 'enemy_' + type;
         const x = side === 'left' ? -def.size : GW + def.size;
-        const y = GROUND_Y - def.size / 2 - 5;
+        let y = GROUND_Y - def.size / 2 - 5;
+
+        // Flying enemies start at room height
+        if (def.flying) {
+            const targetIdx = Math.min((def.flyHeight || 2) - 1, Math.max(0, this.rooms.length - 1));
+            if (this.rooms.length > 0) {
+                y = this.getRoomY(targetIdx) + ROOM_H / 2;
+            } else {
+                y = GROUND_Y - BASE_H - ROOM_H;
+            }
+        }
 
         const sprite = this.add.image(x, y, texKey).setDepth(15);
         sprite.setScale(1.8);
         if (side === 'right') sprite.setFlipX(true);
 
-        // Health bar background
+        // Health bar
         const hpBarBg = this.add.graphics();
         hpBarBg.fillStyle(0x000000, 0.7);
         hpBarBg.fillRect(-25, -def.size - 10, 50, 8);
         hpBarBg.setPosition(x, y).setDepth(16);
 
-        // Health bar fill
         const hpBar = this.add.graphics();
         hpBar.fillStyle(0xFF0000);
         hpBar.fillRect(-24, -def.size - 9, 48, 6);
@@ -1654,73 +2422,140 @@ class GameScene extends Phaser.Scene {
             hp: def.hp * hpScale,
             maxHp: def.hp * hpScale,
             speed: def.speed * speedScale,
-            steal: def.steal,
+            damage: def.damage,
+            flying: def.flying || false,
+            baseY: y,
             reward: Math.floor(def.reward * (1 + this.wave * 0.1)),
             size: def.size,
             side,
             atFortress: false,
-            stealTimer: 0,
+            attackTimer: 0,
+            phaseOffset: Math.random() * Math.PI * 2,
         };
 
         this.enemies.push(enemy);
 
-        // Bob animation
-        this.tweens.add({
-            targets: sprite, y: y - 6,
-            duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-        });
+        // Animation
+        if (def.flying) {
+            // Drone rotor spin effect
+            this.tweens.add({
+                targets: sprite, scaleY: 1.6,
+                duration: 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+        } else {
+            this.tweens.add({
+                targets: sprite, y: y - 6,
+                duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            });
+        }
     }
 
     updateEnemies(delta) {
         const fortLeft = FORT_CX - ROOM_W / 2 - 20;
         const fortRight = FORT_CX + ROOM_W / 2 + 20;
+        const time = this.time.now;
 
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const e = this.enemies[i];
 
             if (!e.atFortress) {
                 // Move toward fortress
-                if (e.side === 'left') {
-                    e.x += e.speed * delta / 1000;
-                    if (e.x >= fortLeft) {
-                        e.atFortress = true;
-                        e.x = fortLeft;
+                if (e.flying) {
+                    // Flying enemies move toward fortress center area
+                    if (e.side === 'left') {
+                        e.x += e.speed * delta / 1000;
+                        if (e.x >= FORT_CX - 200) e.atFortress = true;
+                    } else {
+                        e.x -= e.speed * delta / 1000;
+                        if (e.x <= FORT_CX + 200) e.atFortress = true;
                     }
+                    // Vertical bob
+                    e.y = e.baseY + Math.sin(time * 0.003) * 20;
                 } else {
-                    e.x -= e.speed * delta / 1000;
-                    if (e.x <= fortRight) {
-                        e.atFortress = true;
-                        e.x = fortRight;
+                    // Ground enemies move to fortress walls
+                    if (e.side === 'left') {
+                        e.x += e.speed * delta / 1000;
+                        if (e.x >= fortLeft) { e.atFortress = true; e.x = fortLeft; }
+                    } else {
+                        e.x -= e.speed * delta / 1000;
+                        if (e.x <= fortRight) { e.atFortress = true; e.x = fortRight; }
                     }
                 }
 
                 e.sprite.x = e.x;
+                e.sprite.y = e.y;
                 e.hpBarBg.x = e.x;
+                e.hpBarBg.y = e.y;
                 e.hpBar.x = e.x;
+                e.hpBar.y = e.y;
             } else {
-                // Stealing coins
-                e.stealTimer += delta;
-                if (e.stealTimer >= 1000) {
-                    e.stealTimer = 0;
-                    const stolen = Math.min(e.steal, this.coins);
-                    if (stolen > 0) {
-                        this.coins -= stolen;
-                        this.updateHUD();
+                // --- AT FORTRESS: ATTACK ROOMS ---
+                if (e.flying) {
+                    // Flying enemies circle near fortress and attack their target room
+                    const circleAmp = 180;
+                    const circleSpd = 0.001 + (e.type === 'drone' ? 0.001 : 0);
+                    e.x = FORT_CX + circleAmp * Math.sin(time * circleSpd + e.phaseOffset);
+                    e.y = e.baseY + Math.sin(time * 0.003 + e.phaseOffset) * 20;
+                    e.sprite.x = e.x;
+                    e.sprite.y = e.y;
+                    e.hpBarBg.x = e.x;
+                    e.hpBarBg.y = e.y;
+                    e.hpBar.x = e.x;
+                    e.hpBar.y = e.y;
+                    e.sprite.setFlipX(Math.cos(time * circleSpd + e.phaseOffset) < 0);
 
-                        // Visual - red floating text
-                        const ft = this.add.text(e.x, e.y - 40, `-${stolen}`, {
-                            fontFamily: 'Arial Black', fontSize: '28px', color: '#FF4444',
-                            stroke: '#000', strokeThickness: 3,
-                        }).setOrigin(0.5).setDepth(100);
-                        this.tweens.add({
-                            targets: ft, y: ft.y - 30, alpha: 0,
-                            duration: 600, onComplete: () => ft.destroy(),
-                        });
+                    e.attackTimer += delta;
+                    if (e.attackTimer >= FLYING_ATTACK_INTERVAL) {
+                        e.attackTimer = 0;
+                        const def = ENEMY_DEFS[e.type];
+                        const targetIdx = Math.min((def.flyHeight || 2) - 1, this.rooms.length - 1);
+                        if (targetIdx >= 0) {
+                            this.damageRoom(targetIdx, e.damage);
+                            this.fireEnemyProjectile(e, targetIdx);
+                        }
+                    }
+                } else {
+                    // Ground enemies climb the fortress exterior and attack rooms
+                    if (!e.climbTarget && e.climbTarget !== 0) {
+                        // Pick a target room to climb to (weighted toward lower rooms)
+                        if (this.rooms.length > 0) {
+                            const maxTarget = Math.min(this.rooms.length - 1, Math.floor(this.wave / 3));
+                            e.climbTarget = Phaser.Math.Between(0, maxTarget);
+                            e.climbing = true;
+                        } else {
+                            e.climbTarget = -1;
+                        }
+                    }
+
+                    if (e.climbing && e.climbTarget >= 0) {
+                        // Climb up the fortress wall
+                        const targetY = this.getRoomY(e.climbTarget) + ROOM_H / 2;
+                        if (e.y > targetY + 5) {
+                            e.y -= 40 * delta / 1000; // climb speed
+                            e.sprite.y = e.y;
+                            e.hpBarBg.y = e.y;
+                            e.hpBar.y = e.y;
+                            // Sway while climbing
+                            e.sprite.x = e.x + Math.sin(time * 0.005 + e.phaseOffset) * 4;
+                        } else {
+                            e.climbing = false;
+                            e.y = targetY;
+                        }
+                    } else {
+                        // At target room — attack it
+                        e.attackTimer += delta;
+                        if (e.attackTimer >= ENEMY_ATTACK_INTERVAL) {
+                            e.attackTimer = 0;
+                            const targetIdx = Math.max(0, Math.min(e.climbTarget || 0, this.rooms.length - 1));
+                            if (this.rooms.length > 0) {
+                                this.damageRoom(targetIdx, e.damage);
+                                this.fireEnemyProjectile(e, targetIdx);
+                            }
+                        }
+                        // Shake while attacking
+                        e.sprite.x = e.x + Math.sin(time * 0.02) * 3;
                     }
                 }
-
-                // Shake when attacking
-                e.sprite.x = e.x + Math.sin(this.time.now * 0.02) * 3;
             }
         }
     }
@@ -1729,10 +2564,14 @@ class GameScene extends Phaser.Scene {
         this.rooms.forEach((room, i) => {
             const def = ROOM_DEFS[room.type];
             if (def.category !== 'turret') return;
+            if (room.constructing) return;
+            if (room.dogs.length === 0) return; // turrets need a dog to operate
             if (this.enemies.length === 0) return;
 
-            // Cooldown check
-            if (time - room.lastFire < def.fireRate) return;
+            // Cooldown check (damaged turrets fire slower)
+            const hpMult = 0.1 + 0.9 * (room.hp / room.maxHp);
+            const effectiveFireRate = def.fireRate / hpMult;
+            if (time - room.lastFire < effectiveFireRate) return;
 
             // Find nearest enemy in range
             const ry = this.getRoomY(i) + ROOM_H / 2;
@@ -1774,8 +2613,9 @@ class GameScene extends Phaser.Scene {
         const sprite = this.add.image(startX, startY, texKey).setDepth(30);
         sprite.setScale(room.type === 'cannon' ? 1.5 : 1);
 
-        const dogBonus = 1 + room.dogs.length * 0.2;
-        const damage = def.baseDamage * room.level * dogBonus;
+        const dogBonus = this.getRoomDogBonus(room);
+        const hpMult = 0.1 + 0.9 * (room.hp / room.maxHp);
+        const damage = def.baseDamage * room.level * dogBonus * hpMult * this.getPrestigeMultiplier();
 
         const proj = {
             sprite, damage,
@@ -1927,13 +2767,15 @@ class GameScene extends Phaser.Scene {
 
     waveComplete() {
         this.waveActive = false;
-        this.waveCountdown = Math.max(20, 35 - this.wave);
+        this.waveCountdown = Math.max(15, 30 - this.wave);
 
-        const bonus = this.wave * 15;
+        const bonus = this.wave * 12;
+        const bonesReward = Math.max(1, Math.floor(this.wave / 2));
         this.coins += bonus;
+        this.bones += bonesReward;
         this.updateHUD();
 
-        this.showNotification(`Wave ${this.wave} complete! +${bonus} bonus!`, '#44FF88');
+        this.showNotification(`Wave ${this.wave} complete! +${bonus}c +${bonesReward} Bones!`, '#44FF88');
 
         // Victory text
         const vText = this.add.text(GW / 2, GH / 2, 'WAVE CLEARED!', {
@@ -1945,6 +2787,213 @@ class GameScene extends Phaser.Scene {
             targets: vText, scaleX: 1.3, scaleY: 1.3, alpha: 0,
             duration: 1500, ease: 'Power2', delay: 500,
             onComplete: () => vText.destroy(),
+        });
+    }
+
+    // --- LOST DOG MISSIONS ---
+    tryLostDogMission() {
+        if (this.lostDogActive) return;
+        if (this.rooms.length < 3) return;
+        if (Math.random() > 0.4) return;
+
+        this.lostDogActive = true;
+        this.lostDogRoom = Phaser.Math.Between(0, this.rooms.length - 1);
+
+        // Show a small paw icon in the lost dog's room
+        const ry = this.getRoomY(this.lostDogRoom);
+        const pawIcon = this.add.text(
+            FORT_CX + Phaser.Math.Between(-ROOM_W / 3, ROOM_W / 3),
+            ry + ROOM_H / 2,
+            '?', {
+                fontFamily: 'Arial Black', fontSize: '32px', color: '#FFAA00',
+                stroke: '#000', strokeThickness: 4,
+            }
+        ).setOrigin(0.5).setDepth(26);
+        this.tweens.add({
+            targets: pawIcon, y: pawIcon.y - 8, duration: 400,
+            yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        });
+        this.lostDogIcon = pawIcon;
+
+        this.showNotification('A lost dog is hiding in your fortress! Find it!', '#FFAA00');
+
+        // Auto-expire after 30 seconds
+        this.time.delayedCall(30000, () => {
+            if (this.lostDogActive) {
+                this.lostDogActive = false;
+                if (this.lostDogIcon) { this.lostDogIcon.destroy(); this.lostDogIcon = null; }
+                this.showNotification('The lost dog ran away...', '#888888');
+            }
+        });
+    }
+
+    // Override handleRoomTap to check for lost dog
+    handleRoomTapForLostDog(roomIndex) {
+        if (!this.lostDogActive) return false;
+        if (roomIndex === this.lostDogRoom) {
+            this.lostDogActive = false;
+            if (this.lostDogIcon) { this.lostDogIcon.destroy(); this.lostDogIcon = null; }
+            this.bones += 5;
+            const dog = this.addDog();
+            this.showNotification(`Found ${dog.name}! +5 Bones!`, '#FFD700');
+            const ry = this.getRoomY(roomIndex);
+            this.spawnParticles(FORT_CX, ry + ROOM_H / 2, 0xFFD700, 15);
+            this.updateHUD();
+            return true;
+        }
+        return false;
+    }
+
+    // --- PRESTIGE / REBUILD ---
+    fortifyTower() {
+        if (this.rooms.length < 10) {
+            this.showNotification('Need at least 10 floors to Fortify!', '#FF8844');
+            return;
+        }
+
+        const medalsEarned = Math.floor(this.rooms.length / 10);
+        this.shieldMedals += medalsEarned;
+
+        // Reset tower but keep dogs, bones, medals
+        this.rooms.forEach(r => {
+            if (r.container) r.container.destroy();
+            r.dogs.forEach(d => { if (d.sprite) d.sprite.destroy(); d.assignedRoom = -1; d.sprite = null; });
+        });
+        this.rooms = [];
+        this.enemies.forEach(e => { e.sprite.destroy(); e.hpBarBg.destroy(); e.hpBar.destroy(); });
+        this.enemies = [];
+        this.projectiles.forEach(p => p.sprite.destroy());
+        this.projectiles = [];
+
+        this.coins = 300 + this.shieldMedals * 50;
+        this.wave = 0;
+        this.waveActive = false;
+        this.waveCountdown = 45;
+        this.totalRoomsBuilt = 0;
+
+        this.showNotification(`FORTIFIED! +${medalsEarned} Shield Medals! (Total: ${this.shieldMedals})`, '#FFD700');
+        this.showNotification(`Medals give +${this.shieldMedals * 5}% to income, damage & HP!`, '#AADDFF');
+        this.updateHUD();
+    }
+
+    // Get prestige multiplier from shield medals
+    getPrestigeMultiplier() {
+        return 1 + this.shieldMedals * 0.05;
+    }
+
+    // --- ROOM DAMAGE ---
+    damageRoom(roomIndex, damage) {
+        const room = this.rooms[roomIndex];
+        if (!room || room.constructing) return;
+
+        const mitigation = 1 - room.dogs.length * 0.05;
+        const actualDamage = Math.max(1, Math.floor(damage * mitigation));
+        room.hp = Math.max(1, room.hp - actualDamage);
+
+        // Update damage state
+        const hpPct = room.hp / room.maxHp;
+        const newState = hpPct > 0.75 ? 0 : hpPct > 0.5 ? 1 : hpPct > 0.25 ? 2 : 3;
+
+        if (newState !== room.damageState) {
+            room.damageState = newState;
+            this.updateRoomDamageVisual(room);
+        }
+        this.updateRoomHpBar(room);
+
+        // Floating damage text
+        const ry = this.getRoomY(roomIndex);
+        const ft = this.add.text(
+            FORT_CX + Phaser.Math.Between(-80, 80), ry + ROOM_H / 2,
+            `-${actualDamage}`, {
+                fontFamily: 'Arial Black', fontSize: '24px', color: '#FF6644',
+                stroke: '#000', strokeThickness: 3,
+            }
+        ).setOrigin(0.5).setDepth(100);
+        this.tweens.add({
+            targets: ft, y: ft.y - 25, alpha: 0,
+            duration: 500, onComplete: () => ft.destroy(),
+        });
+
+        // Flash room red
+        if (room.container) {
+            room.container.setAlpha(0.6);
+            this.time.delayedCall(100, () => { if (room.container) room.container.setAlpha(1); });
+        }
+    }
+
+    updateRoomDamageVisual(room) {
+        if (room.damageOverlay) { room.damageOverlay.destroy(); room.damageOverlay = null; }
+        if (room.damageState === 0) return;
+
+        const g = this.add.graphics();
+        const hw = ROOM_W / 2, hh = ROOM_H / 2;
+
+        if (room.damageState >= 1) {
+            g.lineStyle(2, 0x000000, 0.4);
+            g.beginPath(); g.moveTo(-hw + 50, -hh); g.lineTo(-hw + 70, -hh + 40); g.lineTo(-hw + 55, -hh + 60); g.strokePath();
+            g.beginPath(); g.moveTo(hw - 80, hh); g.lineTo(hw - 60, hh - 35); g.strokePath();
+        }
+        if (room.damageState >= 2) {
+            g.lineStyle(3, 0x000000, 0.5);
+            g.beginPath(); g.moveTo(-hw + 150, -hh); g.lineTo(-hw + 180, 0); g.lineTo(-hw + 160, hh); g.strokePath();
+            g.fillStyle(0x000000, 0.15);
+            g.fillCircle(-80, 10, 25);
+            g.fillCircle(100, -15, 20);
+            g.fillStyle(0x000000, 0.1);
+            g.fillRect(-hw, -hh, ROOM_W, ROOM_H);
+        }
+        if (room.damageState >= 3) {
+            g.fillStyle(0x000000, 0.2);
+            g.fillRect(-hw, -hh, ROOM_W, ROOM_H);
+            g.fillStyle(0x5A4A3A, 0.6);
+            g.fillRect(-hw + 20, hh - 25, 35, 15);
+            g.fillRect(hw - 70, hh - 20, 25, 12);
+            g.fillStyle(0xFF6600, 0.3);
+            g.fillCircle(-60, -10, 8);
+            g.fillCircle(80, 5, 6);
+            g.lineStyle(3, 0x000000, 0.6);
+            g.beginPath(); g.moveTo(0, -hh); g.lineTo(20, -10); g.lineTo(-10, hh); g.strokePath();
+        }
+
+        room.container.add(g);
+        room.damageOverlay = g;
+    }
+
+    updateRoomHpBar(room) {
+        if (!room.hpBarGfx) {
+            room.hpBarGfx = this.add.graphics();
+            room.container.add(room.hpBarGfx);
+        }
+        room.hpBarGfx.clear();
+        const pct = room.hp / room.maxHp;
+        if (pct >= 1) return;
+
+        const barW = 120, barH = 8;
+        const bx = -ROOM_W / 2 + 12, by = -ROOM_H / 2 + 38;
+        room.hpBarGfx.fillStyle(0x000000, 0.6);
+        room.hpBarGfx.fillRect(bx, by, barW, barH);
+        const color = pct > 0.5 ? 0x00CC00 : pct > 0.25 ? 0xFFAA00 : 0xFF2200;
+        room.hpBarGfx.fillStyle(color);
+        room.hpBarGfx.fillRect(bx + 1, by + 1, (barW - 2) * pct, barH - 2);
+    }
+
+    fireEnemyProjectile(enemy, roomIndex) {
+        const ry = this.getRoomY(roomIndex) + ROOM_H / 2;
+        const targetX = FORT_CX;
+        const proj = this.add.graphics();
+        proj.fillStyle(0xFF4400);
+        proj.fillCircle(0, 0, 5);
+        proj.fillStyle(0xFF8800, 0.5);
+        proj.fillCircle(0, 0, 8);
+        proj.setPosition(enemy.x, enemy.y).setDepth(29);
+
+        this.tweens.add({
+            targets: proj, x: targetX, y: ry,
+            duration: 300, ease: 'Power1',
+            onComplete: () => {
+                this.spawnParticles(targetX, ry, 0xFF4400, 4);
+                proj.destroy();
+            },
         });
     }
 
@@ -2006,6 +3055,7 @@ class GameScene extends Phaser.Scene {
     updateHUD() {
         this.coinText.setText(Math.floor(this.coins).toLocaleString());
         this.dogText.setText(this.dogs.length.toString());
+        this.bonesText.setText(`Bones: ${this.bones}`);
 
         // Pulse coin text on change
         this.tweens.add({
@@ -2018,16 +3068,25 @@ class GameScene extends Phaser.Scene {
     saveGame() {
         const data = {
             coins: this.coins,
+            bones: this.bones,
             wave: this.wave,
             totalRoomsBuilt: this.totalRoomsBuilt,
+            shieldMedals: this.shieldMedals,
+            savedAt: Date.now(),
             rooms: this.rooms.map(r => ({
                 type: r.type, level: r.level,
+                hp: r.hp, maxHp: r.maxHp,
+                damageState: r.damageState,
                 accumulated: r.accumulated,
-                dogCount: r.dogs.length,
+                constructing: r.constructing || false,
+                constructionLeft: r.constructionLeft || 0,
+                constructionTime: r.constructionTime || 0,
             })),
             dogs: this.dogs.map(d => ({
                 name: d.name, breed: d.breed,
-                breedIndex: d.breedIndex, bonus: d.bonus,
+                breedIndex: d.breedIndex,
+                skills: d.skills,
+                dreamSkill: d.dreamSkill,
                 assignedRoom: d.assignedRoom,
             })),
         };
@@ -2041,9 +3100,106 @@ class GameScene extends Phaser.Scene {
             const raw = localStorage.getItem('dogFortress_save');
             if (!raw) return false;
             const data = JSON.parse(raw);
-            // TODO: restore state from save
+            if (!data.rooms || !data.dogs) return false;
+
+            // Restore state
+            this.coins = data.coins || 0;
+            this.bones = data.bones || 0;
+            this.wave = data.wave || 0;
+            this.totalRoomsBuilt = data.totalRoomsBuilt || 0;
+            this.shieldMedals = data.shieldMedals || 0;
+            this.waveCountdown = 45;
+
+            // Restore rooms
+            data.rooms.forEach((rd, i) => {
+                const def = ROOM_DEFS[rd.type];
+                if (!def) return;
+                const baseMaxHp = ROOM_MAX_HP[def.category] || 100;
+                const room = {
+                    type: rd.type,
+                    level: rd.level || 1,
+                    dogs: [],
+                    accumulated: rd.accumulated || 0,
+                    lastFire: 0,
+                    container: null,
+                    coinIcon: null,
+                    hp: rd.hp || baseMaxHp,
+                    maxHp: rd.maxHp || baseMaxHp,
+                    damageState: rd.damageState || 0,
+                    damageOverlay: null,
+                    hpBarGfx: null,
+                    constructing: rd.constructing || false,
+                    constructionTime: rd.constructionTime || 0,
+                    constructionLeft: rd.constructionLeft || 0,
+                    constructionGfx: null,
+                    constructionText: null,
+                    constructionOverlay: null,
+                };
+                this.rooms.push(room);
+                this.createRoomVisual(room, i);
+
+                // Rebuild construction indicator
+                if (room.constructing) {
+                    this.createConstructionIndicator(room);
+                }
+
+                // Rebuild damage overlay
+                if (room.damageState > 0) {
+                    this.updateRoomDamageVisual(room);
+                    this.updateRoomHpBar(room);
+                }
+            });
+
+            // Restore dogs
+            data.dogs.forEach(dd => {
+                const dog = {
+                    name: dd.name,
+                    breed: dd.breed,
+                    breedIndex: dd.breedIndex,
+                    skills: dd.skills || { combat: 1, production: 1, repair: 1, communication: 1 },
+                    dreamSkill: dd.dreamSkill || 'production',
+                    assignedRoom: dd.assignedRoom,
+                    sprite: null,
+                };
+                this.dogs.push(dog);
+
+                // If assigned to a room, rebuild sprite and add to room's dogs array
+                if (dog.assignedRoom >= 0 && dog.assignedRoom < this.rooms.length) {
+                    const room = this.rooms[dog.assignedRoom];
+                    room.dogs.push(dog);
+
+                    const ry = this.getRoomY(dog.assignedRoom);
+                    const dogX = FORT_CX - ROOM_W / 3 + room.dogs.length * 80;
+                    const dogSprite = this.add.image(dogX, ry + ROOM_H - 25, 'dog_' + dog.breedIndex);
+                    dogSprite.setScale(1.5).setDepth(25).setInteractive();
+                    dog.sprite = dogSprite;
+
+                    dogSprite.on('pointerup', () => {
+                        if (!this.isDragging) { this.dogTapped = true; this.showDogInfo(dog); }
+                    });
+
+                    this.tweens.add({
+                        targets: dogSprite, x: dogX + 30,
+                        duration: Phaser.Math.Between(1500, 2500),
+                        yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    });
+                }
+            });
+
+            // Update room active states (inactive overlay)
+            this.rooms.forEach(r => this.updateRoomActiveState(r));
+
+            // Position camera to show fortress
+            if (this.rooms.length > 0) {
+                const topRoomY = this.getRoomY(this.rooms.length - 1);
+                this.cameras.main.scrollY = topRoomY - GH / 2 + ROOM_H * 2;
+            }
+
+            this.updateHUD();
+            this.showNotification('Game loaded!', '#44FF88');
             return true;
         } catch (e) {
+            console.error('Load failed:', e);
             return false;
         }
     }
