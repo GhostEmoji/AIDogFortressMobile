@@ -50,6 +50,16 @@ const ROOM_DEFS = {
     },
 };
 
+// --- BUILD CATEGORIES ---
+const ROOM_POOLS = {
+    income: ['quarters', 'kitchen', 'workshop'],
+    turret: ['machinegun', 'cannon', 'sniper'],
+};
+const CATEGORY_INFO = {
+    income: { name: 'Income', desc: 'Random income room', color: 0xC4993D, cost: 100 },
+    turret: { name: 'Combat', desc: 'Random turret', color: 0xB83C3C, cost: 200 },
+};
+
 // --- ENEMY DEFINITIONS ---
 const ENEMY_DEFS = {
     scout:   { name: 'Scout Bot',   color: 0x88AACC, hp: 55,  speed: 80,  damage: 8,  reward: 10,  size: 44, flying: false },
@@ -744,15 +754,12 @@ class GameScene extends Phaser.Scene {
 
     // --- BUILD BAR ---
     createBuildBar() {
-        // Build menu - drawn as standalone graphics + zones (no nested containers for input)
-        const types = Object.keys(ROOM_DEFS);
-        const PANEL_H = 340;
-        const cardW = 240, cardH = 130, cardGap = 12;
-        const cardsPerRow = 4;
-        const row1Count = 4; // quarters, kitchen, workshop, radio
-        const row2Count = 3; // mg, cannon, sniper
-        const row1W = row1Count * (cardW + cardGap) - cardGap;
-        const row2W = row2Count * (cardW + cardGap) - cardGap;
+        // Show all 7 rooms directly — 4 on top row, 3 on bottom
+        const allRooms = Object.keys(ROOM_DEFS);
+        const PANEL_H = 380;
+        const cardW = 240, cardH = 140, cardGap = 12;
+        const row1 = allRooms.slice(0, 4); // quarters, kitchen, workshop, radio
+        const row2 = allRooms.slice(4);     // machinegun, cannon, sniper
 
         this.buildBarContainer = this.add.container(0, GH + PANEL_H + 20).setDepth(510).setScrollFactor(0);
 
@@ -765,92 +772,85 @@ class GameScene extends Phaser.Scene {
         this.buildBarContainer.add(barBg);
 
         // Title
-        const barTitle = this.add.text(GW / 2, -PANEL_H + 20, 'BUILD ROOM', {
+        this.buildBarContainer.add(this.add.text(GW / 2, -PANEL_H + 25, 'BUILD ROOM', {
             fontFamily: 'Arial Black', fontSize: '32px', color: '#FFD700',
             stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0.5);
-        this.buildBarContainer.add(barTitle);
+        }).setOrigin(0.5));
 
-        // Close button visual (in container for positioning)
-        const closeTxt = this.add.text(GW - 50, -PANEL_H + 20, 'X', {
+        // Close button
+        this.buildBarContainer.add(this.add.text(GW - 50, -PANEL_H + 25, 'X', {
             fontFamily: 'Arial Black', fontSize: '36px', color: '#FF6644',
             stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0.5);
-        this.buildBarContainer.add(closeTxt);
+        }).setOrigin(0.5));
 
-        // Card data for layout updates
         this.buildCards = [];
+        const openY = GH;
 
-        // Compute screen positions for cards when menu is OPEN (container.y = GH)
-        // Card relative cy within container → screen y = GH + cy
-        const openY = GH; // container y when open
-
-        types.forEach((key, i) => {
-            const def = ROOM_DEFS[key];
-            const row = i < row1Count ? 0 : 1;
-            const col = row === 0 ? i : i - row1Count;
-            const rowW = row === 0 ? row1W : row2W;
+        const makeRow = (keys, rowIndex) => {
+            const rowW = keys.length * (cardW + cardGap) - cardGap;
             const rowStartX = (GW - rowW) / 2;
-            const cx = rowStartX + col * (cardW + cardGap) + cardW / 2;
-            const cy = -PANEL_H + 70 + row * (cardH + 12) + cardH / 2;
+            const cy = -PANEL_H + 70 + rowIndex * (cardH + 14) + cardH / 2;
 
-            // Card visuals (in container so they animate with menu)
-            const g = this.add.graphics();
-            g.fillStyle(def.color, 0.9);
-            g.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 10);
-            g.lineStyle(2, 0xFFFFFF, 0.3);
-            g.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 10);
-            this.buildBarContainer.add(g);
+            keys.forEach((key, col) => {
+                const def = ROOM_DEFS[key];
+                const cx = rowStartX + col * (cardW + cardGap) + cardW / 2;
 
-            const nameText = this.add.text(cx, cy - cardH / 2 + 22, def.name, {
-                fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
-                stroke: '#000', strokeThickness: 4,
-            }).setOrigin(0.5);
-            this.buildBarContainer.add(nameText);
+                const g = this.add.graphics();
+                g.fillStyle(def.color, 0.9);
+                g.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+                g.lineStyle(2, 0xFFFFFF, 0.3);
+                g.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+                this.buildBarContainer.add(g);
 
-            const costText = this.add.text(cx, cy + 8, '', {
-                fontFamily: 'Arial Black', fontSize: '28px', color: '#FFD700',
-                stroke: '#000', strokeThickness: 4,
-            }).setOrigin(0.5);
-            this.buildBarContainer.add(costText);
+                // Name
+                this.buildBarContainer.add(this.add.text(cx, cy - 35, def.name, {
+                    fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
+                    stroke: '#000', strokeThickness: 4,
+                }).setOrigin(0.5));
 
-            const statText = this.add.text(cx, cy + cardH / 2 - 18, '', {
-                fontFamily: 'Arial', fontSize: '20px', color: '#EEEEEE',
-                stroke: '#000', strokeThickness: 3,
-            }).setOrigin(0.5);
-            this.buildBarContainer.add(statText);
+                // Cost
+                const costText = this.add.text(cx, cy + 5, '', {
+                    fontFamily: 'Arial Black', fontSize: '28px', color: '#FFD700',
+                    stroke: '#000', strokeThickness: 4,
+                }).setOrigin(0.5);
+                this.buildBarContainer.add(costText);
 
-            // Screen position when menu is open
-            const screenX = cx;
-            const screenY = openY + cy;
+                // Stat
+                let stat = def.desc;
+                if (def.baseIncome > 0) stat = `+${def.baseIncome}/s`;
+                else if (def.baseDamage) stat = `Dmg: ${def.baseDamage}`;
+                this.buildBarContainer.add(this.add.text(cx, cy + 42, stat, {
+                    fontFamily: 'Arial Black', fontSize: '22px', color: '#FFFFFF',
+                    stroke: '#000', strokeThickness: 3,
+                }).setOrigin(0.5));
 
-            this.buildCards.push({ key, costText, statText, gfx: g, screenX, screenY });
-        });
+                this.buildCards.push({ key, costText, gfx: g, screenX: cx, screenY: openY + cy });
+            });
+        };
 
-        // Scene-level interactive zones for cards (NOT inside any container)
+        makeRow(row1, 0);
+        makeRow(row2, 1);
+
+        // Scene-level interactive zones
         this.buildCardZones = [];
-        this.buildCards.forEach((card, i) => {
+        this.buildCards.forEach(card => {
             const zone = this.add.zone(card.screenX, card.screenY, cardW, cardH)
                 .setDepth(520).setScrollFactor(0).setInteractive();
-            zone.on('pointerdown', () => {
-                if (this.buildMenuOpen) card.gfx.setAlpha(0.6);
-            });
+            zone.on('pointerdown', () => { if (this.buildMenuOpen) card.gfx.setAlpha(0.6); });
             zone.on('pointerup', () => {
                 card.gfx.setAlpha(1);
                 if (this.buildMenuOpen) this.buildRoom(card.key);
             });
             zone.on('pointerout', () => card.gfx.setAlpha(1));
-            zone.disableInteractive(); // start disabled — enabled when menu opens
+            zone.disableInteractive();
             this.buildCardZones.push(zone);
         });
 
-        // Scene-level close button zone
-        this.buildCloseZone = this.add.zone(GW - 50, openY + (-PANEL_H + 20), 80, 60)
+        // Close zone
+        this.buildCloseZone = this.add.zone(GW - 50, openY + (-PANEL_H + 25), 80, 60)
             .setDepth(520).setScrollFactor(0).setInteractive();
-        this.buildCloseZone.on('pointerup', () => {
-            if (this.buildMenuOpen) this.toggleBuildMenu();
-        });
-        this.buildCloseZone.disableInteractive(); // start disabled
+        this.buildCloseZone.on('pointerup', () => { if (this.buildMenuOpen) this.toggleBuildMenu(); });
+        this.buildCloseZone.disableInteractive();
 
         // Build button (always visible)
         this.buildBtnGfx = this.add.graphics().setDepth(505).setScrollFactor(0);
@@ -1137,10 +1137,11 @@ class GameScene extends Phaser.Scene {
     }
 
     // --- BUILD ROOM ---
-    buildRoom(typeKey) {
+    buildRoom(typeKey, overrideCost) {
         const def = ROOM_DEFS[typeKey];
-        const cost = this.getRoomCost(typeKey);
+        if (!def) return;
 
+        const cost = overrideCost || Math.floor(def.baseCost * (1 + 0.12 * this.totalRoomsBuilt));
         if (this.coins < cost) {
             this.showNotification('Not enough coins!', '#FF4444');
             return;
@@ -1169,12 +1170,15 @@ class GameScene extends Phaser.Scene {
             constructionLeft: buildTime,
             constructionGfx: null,
             constructionText: null,
+            constructionOverlay: null,
+            revealed: false,
         };
 
         const index = this.rooms.length;
         this.rooms.push(room);
 
-        this.createRoomVisual(room, index);
+        // Build a generic grey placeholder during construction
+        this.createConstructionPlaceholder(room, index);
 
         // Add radial construction indicator
         this.createConstructionIndicator(room);
@@ -1193,11 +1197,191 @@ class GameScene extends Phaser.Scene {
             scrollY: ry - GH / 2 + ROOM_H, duration: 600, ease: 'Power2',
         });
 
-        this.showNotification(`Building ${def.name}... (${buildTime}s)`, '#FFAA44');
+        this.showNotification(`Building ${def.name}...`, '#FFAA44');
         this.updateHUD();
+
+        if (this.buildMenuOpen) this.toggleBuildMenu();
+    }
+
+    getCategoryCost(category) {
+        const base = CATEGORY_INFO[category].cost;
+        return Math.floor(base * (1 + 0.12 * this.totalRoomsBuilt));
+    }
+
+    // --- ROOM PICKER (choose from 3) ---
+    showRoomPicker(category) {
+        const pool = ROOM_POOLS[category];
+        if (!pool) return;
+
+        const catInfo = CATEGORY_INFO[category];
+        const cost = this.getCategoryCost(category);
+
+        if (this.coins < cost) {
+            this.showNotification('Not enough coins!', '#FF4444');
+            return;
+        }
 
         // Close build menu
         if (this.buildMenuOpen) this.toggleBuildMenu();
+
+        // Pick up to 3 random options (shuffle pool)
+        const options = Phaser.Utils.Array.Shuffle([...pool]).slice(0, 3);
+
+        const popup = this.add.container(GW / 2, GH / 2).setDepth(700).setScrollFactor(0);
+        this.roomPickerPopup = popup;
+
+        // Dim
+        const dim = this.add.graphics();
+        dim.fillStyle(0x000000, 0.6);
+        dim.fillRect(-GW / 2, -GH / 2, GW, GH);
+        popup.add(dim);
+
+        // Panel
+        const cardW = 280, cardH = 280, cardGap = 24;
+        const totalW = options.length * (cardW + cardGap) - cardGap;
+        const panelW = totalW + 80;
+        const panelH = cardH + 140;
+
+        const panel = this.add.graphics();
+        panel.fillStyle(0x1A0A00, 0.95);
+        panel.fillRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 16);
+        panel.lineStyle(3, 0xDAA520);
+        panel.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 16);
+        popup.add(panel);
+
+        // Title
+        popup.add(this.add.text(0, -panelH / 2 + 28, 'Choose a Room', {
+            fontFamily: 'Arial Black', fontSize: '34px', color: '#FFD700',
+            stroke: '#000', strokeThickness: 5,
+        }).setOrigin(0.5));
+
+        popup.add(this.add.text(0, -panelH / 2 + 68, `${cost} coins`, {
+            fontFamily: 'Arial Black', fontSize: '26px', color: '#CCCCCC',
+            stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0.5));
+
+        // Room option cards
+        this.roomPickerZones = [];
+        const startX = -totalW / 2 + cardW / 2;
+        const cardY = 30;
+
+        options.forEach((typeKey, i) => {
+            const def = ROOM_DEFS[typeKey];
+            const cx = startX + i * (cardW + cardGap);
+
+            // Card background
+            const g = this.add.graphics();
+            g.fillStyle(def.color, 0.9);
+            g.fillRoundedRect(cx - cardW / 2, cardY - cardH / 2, cardW, cardH, 14);
+            g.lineStyle(3, 0xFFFFFF, 0.3);
+            g.strokeRoundedRect(cx - cardW / 2, cardY - cardH / 2, cardW, cardH, 14);
+            popup.add(g);
+
+            // Room name
+            popup.add(this.add.text(cx, cardY - cardH / 2 + 35, def.name, {
+                fontFamily: 'Arial Black', fontSize: '28px', color: '#FFFFFF',
+                stroke: '#000', strokeThickness: 5,
+            }).setOrigin(0.5));
+
+            // Stats
+            if (def.baseIncome > 0) {
+                popup.add(this.add.text(cx, cardY + 10, `${def.baseIncome}/s`, {
+                    fontFamily: 'Arial Black', fontSize: '36px', color: '#FFD700',
+                    stroke: '#000', strokeThickness: 4,
+                }).setOrigin(0.5));
+                popup.add(this.add.text(cx, cardY + 50, 'income', {
+                    fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
+                    stroke: '#000', strokeThickness: 4,
+                }).setOrigin(0.5));
+            } else if (def.baseDamage) {
+                popup.add(this.add.text(cx, cardY - 10, `${def.baseDamage}`, {
+                    fontFamily: 'Arial Black', fontSize: '40px', color: '#FF6644',
+                    stroke: '#000', strokeThickness: 4,
+                }).setOrigin(0.5));
+                popup.add(this.add.text(cx, cardY + 30, 'damage', {
+                    fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
+                    stroke: '#000', strokeThickness: 4,
+                }).setOrigin(0.5));
+                popup.add(this.add.text(cx, cardY + 60, `${(def.fireRate / 1000).toFixed(1)}s  |  ${def.range}px`, {
+                    fontFamily: 'Arial Black', fontSize: '22px', color: '#FFFFFF',
+                    stroke: '#000', strokeThickness: 3,
+                }).setOrigin(0.5));
+            }
+
+            // Description
+            popup.add(this.add.text(cx, cardY + cardH / 2 - 25, def.desc, {
+                fontFamily: 'Arial Black', fontSize: '22px', color: '#FFFFFF',
+                stroke: '#000', strokeThickness: 4,
+            }).setOrigin(0.5));
+
+            // Scene-level zone
+            const zone = this.add.zone(GW / 2 + cx, GH / 2 + cardY, cardW, cardH)
+                .setDepth(701).setScrollFactor(0).setInteractive();
+            zone.on('pointerdown', () => g.setAlpha(0.6));
+            zone.on('pointerup', () => {
+                g.setAlpha(1);
+                this.closeRoomPicker();
+                this.buildRoom(typeKey, cost);
+            });
+            zone.on('pointerout', () => g.setAlpha(1));
+            this.roomPickerZones.push(zone);
+        });
+
+        // Close zone behind
+        this.roomPickerCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
+            .setDepth(699).setScrollFactor(0).setInteractive();
+        this.roomPickerCloseZone.on('pointerup', () => this.closeRoomPicker());
+
+        // Animate
+        popup.setScale(0.8).setAlpha(0);
+        this.tweens.add({
+            targets: popup, scaleX: 1, scaleY: 1, alpha: 1,
+            duration: 200, ease: 'Back.easeOut',
+        });
+    }
+
+    closeRoomPicker() {
+        if (this.roomPickerPopup) { this.roomPickerPopup.destroy(); this.roomPickerPopup = null; }
+        if (this.roomPickerCloseZone) { this.roomPickerCloseZone.destroy(); this.roomPickerCloseZone = null; }
+        if (this.roomPickerZones) {
+            this.roomPickerZones.forEach(z => z.destroy());
+            this.roomPickerZones = null;
+        }
+    }
+
+    createConstructionPlaceholder(room, index) {
+        const ry = this.getRoomY(index);
+        const container = this.add.container(FORT_CX, ry + ROOM_H / 2).setDepth(20);
+
+        // Grey placeholder room
+        const bg = this.add.graphics();
+        bg.fillStyle(0x444444);
+        bg.fillRect(-ROOM_W / 2, -ROOM_H / 2, ROOM_W, ROOM_H);
+        bg.fillStyle(0x555555);
+        bg.fillRect(-ROOM_W / 2, ROOM_H / 2 - 20, ROOM_W, 20);
+        // Scaffolding lines
+        bg.lineStyle(2, 0x666666, 0.5);
+        for (let x = -ROOM_W / 2 + 40; x < ROOM_W / 2; x += 80) {
+            bg.beginPath(); bg.moveTo(x, -ROOM_H / 2); bg.lineTo(x + 40, ROOM_H / 2); bg.strokePath();
+            bg.beginPath(); bg.moveTo(x + 40, -ROOM_H / 2); bg.lineTo(x, ROOM_H / 2); bg.strokePath();
+        }
+        // Thin edges
+        bg.fillStyle(0x5A4A3A);
+        bg.fillRect(-ROOM_W / 2 - 6, -ROOM_H / 2, 6, ROOM_H);
+        bg.fillRect(ROOM_W / 2, -ROOM_H / 2, 6, ROOM_H);
+        bg.lineStyle(2, 0x3A2A1A, 0.6);
+        bg.strokeRect(-ROOM_W / 2, -ROOM_H / 2, ROOM_W, ROOM_H);
+        container.add(bg);
+
+        // "?" label
+        const label = this.add.text(- ROOM_W / 2 + 15, -ROOM_H / 2 + 8, 'Building...', {
+            fontFamily: 'Arial Black', fontSize: '26px', color: '#AAAAAA',
+            stroke: '#000', strokeThickness: 4,
+        });
+        container.add(label);
+
+        room.container = container;
+        room.placeholderLabel = label;
     }
 
     getRoomCost(typeKey) {
@@ -1376,25 +1560,33 @@ class GameScene extends Phaser.Scene {
     finishConstruction(room, index) {
         room.constructing = false;
         room.constructionLeft = 0;
+        room.revealed = true;
 
-        // Remove construction visuals
-        if (room.constructionOverlay) { room.constructionOverlay.destroy(); room.constructionOverlay = null; }
-        if (room.constructionGfx) { room.constructionGfx.destroy(); room.constructionGfx = null; }
-        if (room.constructionText) { room.constructionText.destroy(); room.constructionText = null; }
+        // Destroy the entire placeholder container
+        if (room.container) { room.container.destroy(); room.container = null; }
+
+        // Build the real room visual
+        this.createRoomVisual(room, index);
 
         // Update overlay (still needs dog)
         this.updateRoomActiveState(room);
 
-        // Celebration
+        // Reveal animation - flash white then settle
         const ry = this.getRoomY(index);
-        this.spawnParticles(FORT_CX, ry + ROOM_H / 2, 0x44FF88, 20);
-        this.showNotification(`${ROOM_DEFS[room.type].name} complete!`, '#44FF88');
+        this.spawnParticles(FORT_CX, ry + ROOM_H / 2, ROOM_DEFS[room.type].color, 25);
 
-        // Flash
+        const def = ROOM_DEFS[room.type];
+        this.showNotification(`Revealed: ${def.name}!`, '#FFD700');
+
         if (room.container) {
+            room.container.setAlpha(0);
+            this.tweens.add({
+                targets: room.container, alpha: 1,
+                duration: 400, ease: 'Power2',
+            });
             this.tweens.add({
                 targets: room.container, scaleX: 1.05, scaleY: 1.05,
-                duration: 150, yoyo: true, ease: 'Power2',
+                duration: 200, yoyo: true, ease: 'Power2',
             });
         }
     }
@@ -1896,17 +2088,10 @@ class GameScene extends Phaser.Scene {
 
         // Update costs on cards
         this.buildCards.forEach(card => {
-            const cost = this.getRoomCost(card.key);
             const def = ROOM_DEFS[card.key];
+            const cost = Math.floor(def.baseCost * (1 + 0.12 * this.totalRoomsBuilt));
             card.costText.setText(`${cost}c`);
             card.costText.setColor(this.coins >= cost ? '#FFD700' : '#FF4444');
-            if (def.baseIncome > 0) {
-                card.statText.setText(`+${def.baseIncome}/s`);
-            } else if (def.baseDamage) {
-                card.statText.setText(`Dmg: ${def.baseDamage}`);
-            } else {
-                card.statText.setText('Recruit dogs');
-            }
         });
 
         if (this.buildMenuOpen) {
@@ -1915,7 +2100,7 @@ class GameScene extends Phaser.Scene {
                 targets: this.buildBarContainer, y: GH,
                 duration: 300, ease: 'Back.easeOut',
             });
-            this.moveBuildButton(GH - 410);
+            this.moveBuildButton(GH - 450);
             // Enable card & close zones
             this.buildCardZones.forEach(z => z.setInteractive());
             this.buildCloseZone.setInteractive();
@@ -3218,11 +3403,13 @@ class GameScene extends Phaser.Scene {
                     constructionOverlay: null,
                 };
                 this.rooms.push(room);
-                this.createRoomVisual(room, i);
 
-                // Rebuild construction indicator
                 if (room.constructing) {
+                    // Show placeholder for rooms still under construction
+                    this.createConstructionPlaceholder(room, i);
                     this.createConstructionIndicator(room);
+                } else {
+                    this.createRoomVisual(room, i);
                 }
 
                 // Rebuild damage overlay
@@ -3312,7 +3499,7 @@ class GameScene extends Phaser.Scene {
         // Update build menu card costs if open
         if (this.buildMenuOpen && this.buildCards) {
             this.buildCards.forEach(card => {
-                const cost = this.getRoomCost(card.key);
+                const cost = Math.floor(ROOM_DEFS[card.key].baseCost * (1 + 0.12 * this.totalRoomsBuilt));
                 card.costText.setColor(this.coins >= cost ? '#FFD700' : '#FF4444');
             });
         }
