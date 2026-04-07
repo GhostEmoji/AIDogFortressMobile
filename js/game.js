@@ -7,7 +7,7 @@ const GW = 1080;
 const GH = 1920;
 const WORLD_H = 12000;
 const GROUND_Y = 10000;
-const ROOM_W = 600;
+const ROOM_W = 500;
 const ROOM_H = 150;
 const ROOM_GAP = 4;
 const FORT_X = (GW - ROOM_W) / 2;
@@ -17,8 +17,8 @@ const BASE_H = 180;
 // --- ROOM DEFINITIONS ---
 const ROOM_DEFS = {
     quarters: {
-        name: 'Quarters', desc: 'Dog housing', color: 0xC4813D, colorDark: 0x8B5E2B,
-        baseCost: 50, baseIncome: 2, category: 'income',
+        name: 'Quarters', desc: '+3 dog capacity', color: 0xC4813D, colorDark: 0x8B5E2B,
+        baseCost: 40, baseIncome: 0, category: 'housing',
     },
     kitchen: {
         name: 'Kitchen', desc: 'Cook food for coins', color: 0xE8B84B, colorDark: 0xB8922E,
@@ -30,7 +30,7 @@ const ROOM_DEFS = {
     },
     radio: {
         name: 'Radio Tower', desc: 'Recruit dogs', color: 0x3DAE6F, colorDark: 0x2B7D50,
-        baseCost: 200, baseIncome: 1, category: 'special',
+        baseCost: 150, baseIncome: 1, category: 'special',
         recruitInterval: 15000,
     },
     machinegun: {
@@ -71,7 +71,7 @@ const ENEMY_DEFS = {
 };
 
 // --- ROOM HP ---
-const ROOM_MAX_HP = { income: 100, special: 80, turret: 120 };
+const ROOM_MAX_HP = { income: 100, special: 80, turret: 120, housing: 80 };
 const ROOM_HP_PER_LEVEL = 20;
 const ENEMY_ATTACK_INTERVAL = 1500;
 const FLYING_ATTACK_INTERVAL = 2000;
@@ -379,20 +379,6 @@ class MenuScene extends Phaser.Scene {
             fontStyle: 'italic',
         }).setOrigin(0.5);
 
-        // Tap to play
-        const tap = this.add.text(cx, GH - 300, 'TAP TO PLAY', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '52px',
-            color: '#FFFFFF',
-            stroke: '#000000',
-            strokeThickness: 6,
-        }).setOrigin(0.5);
-
-        this.tweens.add({
-            targets: tap, alpha: 0.3, duration: 800,
-            yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-        });
-
         this.tweens.add({
             targets: title, y: title.y - 10, duration: 2000,
             yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
@@ -405,10 +391,54 @@ class MenuScene extends Phaser.Scene {
             dog.setScale(2.5).setAlpha(0.4).setTint(0x884400);
         }
 
-        this.input.once('pointerup', () => {
+        // Check for existing save
+        const hasSave = !!localStorage.getItem('dogFortress_save');
+
+        const startGame = (newGame) => {
+            if (newGame) localStorage.removeItem('dogFortress_save');
             this.cameras.main.fadeOut(400, 0, 0, 0);
             this.time.delayedCall(400, () => this.scene.start('Game'));
-        });
+        };
+
+        // Button layout
+        const btnW = 400, btnH = 80;
+
+        if (hasSave) {
+            // Continue button
+            const contBg = this.add.graphics();
+            contBg.fillStyle(0xDAA520);
+            contBg.fillRoundedRect(cx - btnW / 2, GH - 380, btnW, btnH, 16);
+            contBg.lineStyle(3, 0xFFD700);
+            contBg.strokeRoundedRect(cx - btnW / 2, GH - 380, btnW, btnH, 16);
+
+            this.add.text(cx, GH - 340, 'Continue', {
+                fontFamily: 'Arial Black', fontSize: '42px', color: '#FFFFFF',
+                stroke: '#4A2800', strokeThickness: 5,
+            }).setOrigin(0.5);
+
+            const contZone = this.add.zone(cx, GH - 340, btnW, btnH).setInteractive();
+            contZone.on('pointerdown', () => contBg.setAlpha(0.7));
+            contZone.on('pointerup', () => startGame(false));
+            contZone.on('pointerout', () => contBg.setAlpha(1));
+        }
+
+        // New Game button
+        const newY = hasSave ? GH - 270 : GH - 320;
+        const newBg = this.add.graphics();
+        newBg.fillStyle(hasSave ? 0x555555 : 0xDAA520);
+        newBg.fillRoundedRect(cx - btnW / 2, newY, btnW, btnH, 16);
+        newBg.lineStyle(3, hasSave ? 0x888888 : 0xFFD700);
+        newBg.strokeRoundedRect(cx - btnW / 2, newY, btnW, btnH, 16);
+
+        this.add.text(cx, newY + btnH / 2, 'New Game', {
+            fontFamily: 'Arial Black', fontSize: '42px', color: '#FFFFFF',
+            stroke: hasSave ? '#333333' : '#4A2800', strokeThickness: 5,
+        }).setOrigin(0.5);
+
+        const newZone = this.add.zone(cx, newY + btnH / 2, btnW, btnH).setInteractive();
+        newZone.on('pointerdown', () => newBg.setAlpha(0.7));
+        newZone.on('pointerup', () => startGame(true));
+        newZone.on('pointerout', () => newBg.setAlpha(1));
     }
 }
 
@@ -420,7 +450,7 @@ class GameScene extends Phaser.Scene {
 
     create() {
         // --- State ---
-        this.coins = 300;
+        this.coins = 500;
         this.rooms = [];
         this.dogs = [];
         this.enemies = [];
@@ -465,6 +495,7 @@ class GameScene extends Phaser.Scene {
             this.addDog();
             this.addDog();
             this.addDog();
+            this.updateLobbyDogs();
 
             this.time.delayedCall(600, () => {
                 this.showNotification('Welcome to Dog Fortress!', '#FFD700');
@@ -592,23 +623,9 @@ class GameScene extends Phaser.Scene {
 
         this.fortressBase.add(bg);
 
-        // Sign above lobby
-        const signBg = this.add.graphics();
-        signBg.fillStyle(0x8B6914);
-        signBg.fillRoundedRect(-160, -BASE_H / 2 - 35, 320, 50, 6);
-        signBg.lineStyle(3, 0x5A4A1A);
-        signBg.strokeRoundedRect(-160, -BASE_H / 2 - 35, 320, 50, 6);
-        this.fortressBase.add(signBg);
-
-        const sign = this.add.text(0, -BASE_H / 2 - 12, 'DOG FORTRESS', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '34px', color: '#FFD700',
-            stroke: '#3D1F00', strokeThickness: 5,
-        }).setOrigin(0.5);
-        this.fortressBase.add(sign);
 
         // Lobby label
-        const lobbyLabel = this.add.text(-ROOM_W / 2 + 15, -BASE_H / 2 + 8, 'Lobby', {
+        const lobbyLabel = this.add.text(-ROOM_W / 2 + 15, -BASE_H / 2 + 8, 'Entrance', {
             fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
             stroke: '#000', strokeThickness: 4,
         });
@@ -689,7 +706,7 @@ class GameScene extends Phaser.Scene {
         this.hudContainer.add(coinIcon);
 
         // Coin text
-        this.coinText = this.add.text(90, 60, '300', {
+        this.coinText = this.add.text(90, 60, '500', {
             fontFamily: 'Arial Black, Arial, sans-serif',
             fontSize: '42px', color: '#FFD700',
             stroke: '#000', strokeThickness: 3,
@@ -1106,7 +1123,7 @@ class GameScene extends Phaser.Scene {
         });
 
         // Wave countdown
-        this.waveCountdown = 45;
+        this.waveCountdown = 60;
         this.time.addEvent({
             delay: 1000, loop: true,
             callback: () => this.waveCountdownTick(),
@@ -1498,7 +1515,10 @@ class GameScene extends Phaser.Scene {
     }
 
     updateRoomActiveState(room) {
-        const active = room.dogs.length > 0 && !room.constructing;
+        const def = ROOM_DEFS[room.type];
+        // Housing rooms work without dogs
+        const needsDog = def.category !== 'housing';
+        const active = (!needsDog || room.dogs.length > 0) && !room.constructing;
         if (room.inactiveOverlay) room.inactiveOverlay.setVisible(!active);
     }
 
@@ -2150,6 +2170,11 @@ class GameScene extends Phaser.Scene {
     }
 
     // Calculate total dog bonus for a room. Dream room dogs give 2x.
+    getDogCapacity() {
+        const quartersCount = this.rooms.filter(r => r.type === 'quarters' && !r.constructing).length;
+        return 3 + quartersCount * 3;
+    }
+
     getRoomDogBonus(room) {
         const roomSkill = ROOM_SKILL_MAP[room.type] || 'production';
         let bonus = 1;
@@ -2172,6 +2197,9 @@ class GameScene extends Phaser.Scene {
     }
 
     tryRecruitDog() {
+        // Check capacity
+        if (this.dogs.length >= this.getDogCapacity()) return;
+
         // Need a radio tower
         const radioRooms = this.rooms.filter(r => r.type === 'radio' && r.dogs.length > 0);
         if (radioRooms.length === 0) return;
@@ -2370,6 +2398,11 @@ class GameScene extends Phaser.Scene {
         if (this.selectedRoom < 0) return;
         const targetRoomIndex = this.selectedRoom;
         const room = this.rooms[targetRoomIndex];
+
+        if (ROOM_DEFS[room.type].category === 'housing') {
+            this.showNotification('Quarters provide housing automatically!', '#88CCFF');
+            return;
+        }
 
         if (room.constructing) {
             this.showNotification('Room is still under construction!', '#FF8844');
@@ -3100,8 +3133,12 @@ class GameScene extends Phaser.Scene {
             this.lostDogActive = false;
             if (this.lostDogIcon) { this.lostDogIcon.destroy(); this.lostDogIcon = null; }
             this.bones += 5;
-            const dog = this.addDog();
-            this.showNotification(`Found ${dog.name}! +5 Bones!`, '#FFD700');
+            if (this.dogs.length < this.getDogCapacity()) {
+                const dog = this.addDog();
+                this.showNotification(`Found ${dog.name}! +5 Bones!`, '#FFD700');
+            } else {
+                this.showNotification(`+5 Bones! (no room for more dogs)`, '#FFD700');
+            }
             const ry = this.getRoomY(roomIndex);
             this.spawnParticles(FORT_CX, ry + ROOM_H / 2, 0xFFD700, 15);
             this.updateHUD();
@@ -3132,10 +3169,10 @@ class GameScene extends Phaser.Scene {
         this.projectiles.forEach(p => p.sprite.destroy());
         this.projectiles = [];
 
-        this.coins = 300 + this.shieldMedals * 50;
+        this.coins = 500 + this.shieldMedals * 50;
         this.wave = 0;
         this.waveActive = false;
-        this.waveCountdown = 45;
+        this.waveCountdown = 60;
         this.totalRoomsBuilt = 0;
 
         this.showNotification(`FORTIFIED! +${medalsEarned} Shield Medals! (Total: ${this.shieldMedals})`, '#FFD700');
@@ -3321,7 +3358,7 @@ class GameScene extends Phaser.Scene {
     // --- HUD UPDATE ---
     updateHUD() {
         this.coinText.setText(Math.floor(this.coins).toLocaleString());
-        this.dogText.setText(this.dogs.length.toString());
+        this.dogText.setText(`${this.dogs.length}/${this.getDogCapacity()}`);
         this.bonesText.setText(`Bones: ${this.bones}`);
 
         // Pulse coin text on change
@@ -3375,7 +3412,7 @@ class GameScene extends Phaser.Scene {
             this.wave = data.wave || 0;
             this.totalRoomsBuilt = data.totalRoomsBuilt || 0;
             this.shieldMedals = data.shieldMedals || 0;
-            this.waveCountdown = 45;
+            this.waveCountdown = 60;
 
             // Restore rooms
             data.rooms.forEach((rd, i) => {
@@ -3465,6 +3502,7 @@ class GameScene extends Phaser.Scene {
             }
 
             this.updateHUD();
+            this.updateLobbyDogs();
             this.showNotification('Game loaded!', '#44FF88');
             return true;
         } catch (e) {
