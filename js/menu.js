@@ -35,24 +35,10 @@ class MenuScene extends Phaser.Scene {
         fort.fillRoundedRect(GW / 2 - 50, cy + 300, 100, 100, { tl: 50, tr: 50, bl: 0, br: 0 });
 
         // Title
-        const title = this.add.text(cx, cy - 350, 'DOG\nFORTRESS', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '120px',
-            color: '#FFD700',
-            stroke: '#4A2800',
-            strokeThickness: 12,
-            align: 'center',
-            lineSpacing: -10,
-        }).setOrigin(0.5);
+        const title = this.add.text(cx, cy - 350, 'DOG\nFORTRESS', font('mega', { align: 'center', lineSpacing: -10 })).setOrigin(0.5);
 
         // Subtitle
-        this.add.text(cx, cy - 210, 'Defend. Build. Recruit.', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '36px',
-            color: '#DDA060',
-            stroke: '#000',
-            strokeThickness: 4,
-        }).setOrigin(0.5);
+        this.add.text(cx, cy - 210, 'Defend. Build. Recruit.', font('hud', { color: '#DDA060' })).setOrigin(0.5);
 
         this.tweens.add({
             targets: title, y: title.y - 10, duration: 2000,
@@ -86,10 +72,7 @@ class MenuScene extends Phaser.Scene {
             contBg.lineStyle(3, 0xFFD700);
             contBg.strokeRoundedRect(cx - btnW / 2, GH - 380, btnW, btnH, 16);
 
-            this.add.text(cx, GH - 340, 'Continue', {
-                fontFamily: 'Arial Black', fontSize: '42px', color: '#FFFFFF',
-                stroke: '#4A2800', strokeThickness: 5,
-            }).setOrigin(0.5);
+            this.add.text(cx, GH - 340, 'Continue', font('hud', { stroke: '#4A2800' })).setOrigin(0.5);
 
             const contZone = this.add.zone(cx, GH - 340, btnW, btnH).setInteractive();
             contZone.on('pointerdown', () => contBg.setAlpha(0.7));
@@ -105,10 +88,7 @@ class MenuScene extends Phaser.Scene {
         newBg.lineStyle(3, hasSave ? 0x888888 : 0xFFD700);
         newBg.strokeRoundedRect(cx - btnW / 2, newY, btnW, btnH, 16);
 
-        this.add.text(cx, newY + btnH / 2, 'New Game', {
-            fontFamily: 'Arial Black', fontSize: '42px', color: '#FFFFFF',
-            stroke: hasSave ? '#333333' : '#4A2800', strokeThickness: 5,
-        }).setOrigin(0.5);
+        this.add.text(cx, newY + btnH / 2, 'New Game', font('hud', { stroke: hasSave ? '#333333' : '#4A2800' })).setOrigin(0.5);
 
         const newZone = this.add.zone(cx, newY + btnH / 2, btnW, btnH).setInteractive();
         newZone.on('pointerdown', () => newBg.setAlpha(0.7));

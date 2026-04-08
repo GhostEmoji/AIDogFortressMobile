@@ -100,10 +100,7 @@ GameScene.prototype.createConstructionPlaceholder = function(room, index) {
     container.add(bg);
 
     // "?" label
-    const label = this.add.text(- ROOM_W / 2 + 15, -ROOM_H / 2 + 8, 'Building...', {
-        fontFamily: 'Arial Black', fontSize: '26px', color: '#AAAAAA',
-        stroke: '#000', strokeThickness: 4,
-    });
+    const label = this.add.text(- ROOM_W / 2 + 15, -ROOM_H / 2 + 8, 'Building...', font('body', { color: '#AAAAAA' }));
     container.add(label);
 
     room.container = container;
@@ -124,10 +121,7 @@ GameScene.prototype.createConstructionIndicator = function(room) {
     room.container.add(g);
 
     // Countdown number
-    const t = this.add.text(0, 0, '', {
-        fontFamily: 'Arial Black', fontSize: '32px', color: '#FFFFFF',
-        stroke: '#000', strokeThickness: 5,
-    }).setOrigin(0.5);
+    const t = this.add.text(0, 0, '', FONTS.button).setOrigin(0.5);
     room.constructionText = t;
     room.container.add(t);
 
@@ -247,10 +241,7 @@ GameScene.prototype.createRoomVisual = function(room, index) {
     this.drawRoomDetails(container, room.type, ROOM_W, ROOM_H);
 
     // Room name
-    const nameTag = this.add.text(-ROOM_W / 2 + 12, -ROOM_H / 2 + 6, def.name, {
-        fontFamily: 'Arial Black', fontSize: '26px', color: '#FFFFFF',
-        stroke: '#000', strokeThickness: 4,
-    });
+    const nameTag = this.add.text(-ROOM_W / 2 + 12, -ROOM_H / 2 + 6, def.name, FONTS.body);
     container.add(nameTag);
 
     // Level badge
@@ -259,10 +250,7 @@ GameScene.prototype.createRoomVisual = function(room, index) {
     lvlBg.fillRoundedRect(ROOM_W / 2 - 75, -ROOM_H / 2 + 5, 65, 32, 8);
     container.add(lvlBg);
 
-    const lvlText = this.add.text(ROOM_W / 2 - 42, -ROOM_H / 2 + 21, 'Lv.1', {
-        fontFamily: 'Arial Black', fontSize: '24px', color: '#FFD700',
-        stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5);
+    const lvlText = this.add.text(ROOM_W / 2 - 42, -ROOM_H / 2 + 21, 'Lv.1', font('body', { color: '#FFD700' })).setOrigin(0.5);
     container.add(lvlText);
     room.lvlText = lvlText;
 
@@ -271,10 +259,7 @@ GameScene.prototype.createRoomVisual = function(room, index) {
         const coinContainer = this.add.container(ROOM_W / 2 - 80, 20);
         const cIcon = this.add.image(0, 0, 'coin').setScale(1.2);
         coinContainer.add(cIcon);
-        const cText = this.add.text(20, 0, '0', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFD700',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0, 0.5);
+        const cText = this.add.text(20, 0, '0', font('body', { color: '#FFD700' })).setOrigin(0, 0.5);
         coinContainer.add(cText);
         coinContainer.setAlpha(0);
         container.add(coinContainer);
@@ -557,10 +542,7 @@ GameScene.prototype.collectCoins = function(roomIndex) {
 
     // Floating text
     const ry = this.getRoomY(roomIndex);
-    const floatText = this.add.text(FORT_CX, ry + ROOM_H / 2, `+${amount}`, {
-        fontFamily: 'Arial Black', fontSize: '36px', color: '#FFD700',
-        stroke: '#000', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(100);
+    const floatText = this.add.text(FORT_CX, ry + ROOM_H / 2, `+${amount}`, font('hud', { color: '#FFD700' })).setOrigin(0.5).setDepth(100);
 
     this.tweens.add({
         targets: floatText, y: ry - 20, alpha: 0,
@@ -593,10 +575,7 @@ GameScene.prototype.collectAllCoins = function() {
 
         // Big floating text at center of screen
         const camY = this.cameras.main.scrollY + GH / 2;
-        const floatText = this.add.text(FORT_CX, camY, `+${total}`, {
-            fontFamily: 'Arial Black', fontSize: '52px', color: '#FFD700',
-            stroke: '#000', strokeThickness: 6,
-        }).setOrigin(0.5).setDepth(100);
+        const floatText = this.add.text(FORT_CX, camY, `+${total}`, font('big', { color: '#FFD700' })).setOrigin(0.5).setDepth(100);
 
         this.tweens.add({
             targets: floatText, y: camY - 80, alpha: 0, scaleX: 1.5, scaleY: 1.5,
@@ -835,10 +814,7 @@ GameScene.prototype.damageRoom = function(roomIndex, damage) {
     const ry = this.getRoomY(roomIndex);
     const ft = this.add.text(
         FORT_CX + Phaser.Math.Between(-80, 80), ry + ROOM_H / 2,
-        `-${actualDamage}`, {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FF6644',
-            stroke: '#000', strokeThickness: 3,
-        }
+        `-${actualDamage}`, font('body', { color: '#FF6644' })
     ).setOrigin(0.5).setDepth(100);
     this.tweens.add({
         targets: ft, y: ft.y - 25, alpha: 0,

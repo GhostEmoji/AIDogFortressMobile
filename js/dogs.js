@@ -122,23 +122,20 @@ GameScene.prototype.showDogInfo = function(dog) {
     popup.add(panel);
 
     // Dog name & breed
-    const nameText = this.add.text(0, -190, `${dog.name}`, {
-        fontFamily: 'Arial Black', fontSize: '38px', color: '#FFD700',
-        stroke: '#000', strokeThickness: 5,
-    }).setOrigin(0.5);
+    const nameText = this.add.text(0, -190, `${dog.name}`,
+        font('button', { color: '#FFD700' })
+    ).setOrigin(0.5);
     popup.add(nameText);
 
-    const breedText = this.add.text(0, -145, `${dog.breed}`, {
-        fontFamily: 'Arial Black', fontSize: '28px', color: '#DDA050',
-        stroke: '#000', strokeThickness: 4,
-    }).setOrigin(0.5);
+    const breedText = this.add.text(0, -145, `${dog.breed}`,
+        font('heading', { color: '#DDA050' })
+    ).setOrigin(0.5);
     popup.add(breedText);
 
     if (isDream) {
-        const dreamText = this.add.text(0, -110, 'IN DREAM ROOM! x2 BONUS', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFD700',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        const dreamText = this.add.text(0, -110, 'IN DREAM ROOM! x2 BONUS',
+            font('body', { color: '#FFD700' })
+        ).setOrigin(0.5);
         popup.add(dreamText);
     }
 
@@ -157,11 +154,9 @@ GameScene.prototype.showDogInfo = function(dog) {
         const isRoomSkill = sk.key === roomSkill;
 
         // Label
-        const label = this.add.text(-240, y, sk.label, {
-            fontFamily: 'Arial Black', fontSize: '24px',
-            color: isRoomSkill ? '#FFFFFF' : '#AAAAAA',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0, 0.5);
+        const label = this.add.text(-240, y, sk.label,
+            font('body', { color: isRoomSkill ? '#FFFFFF' : '#AAAAAA' })
+        ).setOrigin(0, 0.5);
         popup.add(label);
 
         // Bar background
@@ -177,18 +172,14 @@ GameScene.prototype.showDogInfo = function(dog) {
         popup.add(barFill);
 
         // Value text
-        const valText = this.add.text(240, y, `${val}/5`, {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        const valText = this.add.text(240, y, `${val}/5`, FONTS.body).setOrigin(0.5);
         popup.add(valText);
 
         // Dream indicator
         if (sk.key === dog.dreamSkill) {
-            const star = this.add.text(-260, y, '*', {
-                fontFamily: 'Arial Black', fontSize: '28px', color: '#FFD700',
-                stroke: '#000', strokeThickness: 3,
-            }).setOrigin(0.5);
+            const star = this.add.text(-260, y, '*',
+                font('heading', { color: '#FFD700', strokeThickness: 3 })
+            ).setOrigin(0.5);
             popup.add(star);
         }
     });
@@ -202,16 +193,14 @@ GameScene.prototype.showDogInfo = function(dog) {
         unBg.strokeRoundedRect(-150, 160, 300, 55, 10);
         popup.add(unBg);
 
-        const unText = this.add.text(0, 187, 'Unassign Dog', {
-            fontFamily: 'Arial Black', fontSize: '26px', color: '#FFFFFF',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        const unText = this.add.text(0, 187, 'Unassign Dog',
+            FONTS.body
+        ).setOrigin(0.5);
         popup.add(unText);
     } else {
-        const closeText = this.add.text(0, 190, 'TAP TO CLOSE', {
-            fontFamily: 'Arial Black', fontSize: '26px', color: '#AAAAAA',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        const closeText = this.add.text(0, 190, 'TAP TO CLOSE',
+            font('body', { color: '#AAAAAA' })
+        ).setOrigin(0.5);
         popup.add(closeText);
     }
 
@@ -327,10 +316,7 @@ GameScene.prototype.showDogPicker = function() {
     popup.add(panel);
 
     // Title
-    popup.add(this.add.text(0, panelTop + 25, 'Choose a Dog', {
-        fontFamily: 'Arial Black', fontSize: '34px', color: '#FFD700',
-        stroke: '#000', strokeThickness: 5,
-    }).setOrigin(0.5));
+    popup.add(this.add.text(0, panelTop + 25, 'Choose a Dog', FONTS.title).setOrigin(0.5));
 
     // Column headers
     const headerY = panelTop + 70;
@@ -343,11 +329,9 @@ GameScene.prototype.showDogPicker = function() {
     ];
     hdrs.forEach(h => {
         const isNeeded = h.skill === roomSkill;
-        popup.add(this.add.text(h.x, headerY, h.label, {
-            fontFamily: 'Arial Black', fontSize: '26px',
-            color: isNeeded ? '#FFFFFF' : '#999999',
-            stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0.5));
+        popup.add(this.add.text(h.x, headerY, h.label,
+            font('body', { color: isNeeded ? '#FFFFFF' : '#999999' })
+        ).setOrigin(0.5));
         if (isNeeded) {
             // Underline the needed skill
             const underline = this.add.graphics();
@@ -381,14 +365,10 @@ GameScene.prototype.showDogPicker = function() {
         popup.add(this.add.image(-panelW / 2 + 60, y, 'dog_' + dog.breedIndex).setScale(1.5));
 
         // Name + breed
-        popup.add(this.add.text(-panelW / 2 + 100, y - 25, dog.name, {
-            fontFamily: 'Arial Black', fontSize: '28px', color: '#FFFFFF',
-            stroke: '#000', strokeThickness: 4,
-        }));
-        popup.add(this.add.text(-panelW / 2 + 100, y + 10, dog.breed + (isDream ? '  DREAM!' : ''), {
-            fontFamily: 'Arial Black', fontSize: '24px', color: isDream ? '#FFD700' : '#C4813D',
-            stroke: '#000', strokeThickness: 3,
-        }));
+        popup.add(this.add.text(-panelW / 2 + 100, y - 25, dog.name, FONTS.heading));
+        popup.add(this.add.text(-panelW / 2 + 100, y + 10, dog.breed + (isDream ? '  DREAM!' : ''),
+            font('body', { color: isDream ? '#FFD700' : '#C4813D' })
+        ));
 
         // 4 skill numbers, color-coded, bigger if it's the room's needed skill
         const skillKeys = ['combat', 'production', 'repair', 'communication'];
@@ -397,13 +377,11 @@ GameScene.prototype.showDogPicker = function() {
             const val = s[sk] || 1;
             const isNeeded = sk === roomSkill;
             const color = SKILL_COLORS[sk];
-            popup.add(this.add.text(skillXs[j], y, `${val}`, {
-                fontFamily: 'Arial Black',
-                fontSize: isNeeded ? '38px' : '28px',
-                color: color,
-                stroke: '#000',
-                strokeThickness: isNeeded ? 5 : 3,
-            }).setOrigin(0.5));
+            popup.add(this.add.text(skillXs[j], y, `${val}`,
+                isNeeded
+                    ? font('button', { color: color })
+                    : font('heading', { color: color, strokeThickness: 3 })
+            ).setOrigin(0.5));
         });
 
         // Scene-level zone
@@ -420,10 +398,9 @@ GameScene.prototype.showDogPicker = function() {
     }
 
     if (freeDogs.length > maxVisible) {
-        popup.add(this.add.text(0, listTop + maxVisible * ROW_H + 15, `+${freeDogs.length - maxVisible} more`, {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#AAAAAA',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5));
+        popup.add(this.add.text(0, listTop + maxVisible * ROW_H + 15, `+${freeDogs.length - maxVisible} more`,
+            font('body', { color: '#AAAAAA' })
+        ).setOrigin(0.5));
     }
 
     // Close zone
@@ -531,10 +508,8 @@ GameScene.prototype.updateLobbyDogs = function() {
     if (freeDogs.length > maxShow) {
         const moreText = this.add.text(
             FORT_CX + ROOM_W / 2 - 20, lobbyY + BASE_H / 2 - 30,
-            `+${freeDogs.length - maxShow}`, {
-                fontFamily: 'Arial Black', fontSize: '24px', color: '#AAAAAA',
-                stroke: '#000', strokeThickness: 3,
-            }
+            `+${freeDogs.length - maxShow}`,
+            font('body', { color: '#AAAAAA' })
         ).setOrigin(1, 0.5).setDepth(11);
         this.lobbyDogSprites.push(moreText);
     }
@@ -574,10 +549,8 @@ GameScene.prototype.tryLostDogMission = function() {
     const pawIcon = this.add.text(
         FORT_CX + Phaser.Math.Between(-ROOM_W / 3, ROOM_W / 3),
         ry + ROOM_H / 2,
-        '?', {
-            fontFamily: 'Arial Black', fontSize: '32px', color: '#FFAA00',
-            stroke: '#000', strokeThickness: 4,
-        }
+        '?',
+        font('button', { color: '#FFAA00', strokeThickness: 4 })
     ).setOrigin(0.5).setDepth(26);
     this.tweens.add({
         targets: pawIcon, y: pawIcon.y - 8, duration: 400,

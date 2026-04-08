@@ -181,10 +181,8 @@ class GameScene extends Phaser.Scene {
 
 
         // Lobby label
-        const lobbyLabel = this.add.text(-ROOM_W / 2 + 15, -BASE_H / 2 + 8, 'Entrance', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
-            stroke: '#000', strokeThickness: 4,
-        });
+        const lobbyLabel = this.add.text(-ROOM_W / 2 + 15, -BASE_H / 2 + 8, 'Entrance',
+            font('body', { strokeThickness: 4 }));
         this.fortressBase.add(lobbyLabel);
 
         // Initial lobby dogs
@@ -209,51 +207,36 @@ class GameScene extends Phaser.Scene {
         this.hudContainer.add(coinIcon);
 
         // Coin text
-        this.coinText = this.add.text(90, 60, '500', {
-            fontFamily: 'Arial Black, Arial, sans-serif',
-            fontSize: '42px', color: '#FFD700',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0, 0.5);
+        this.coinText = this.add.text(90, 60, '500',
+            font('hud', { color: '#FFD700' })).setOrigin(0, 0.5);
         this.hudContainer.add(this.coinText);
 
         // Dog count
-        this.dogIcon = this.add.text(420, 50, 'Dogs:', {
-            fontFamily: 'Arial Black', fontSize: '28px', color: '#C4813D',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        this.dogIcon = this.add.text(420, 50, 'Dogs:',
+            font('heading', { color: '#C4813D', strokeThickness: 3 })).setOrigin(0.5);
         this.hudContainer.add(this.dogIcon);
 
-        this.dogText = this.add.text(480, 60, '1', {
-            fontFamily: 'Arial Black', fontSize: '36px', color: '#FFFFFF',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0, 0.5);
+        this.dogText = this.add.text(480, 60, '1',
+            FONTS.hud).setOrigin(0, 0.5);
         this.hudContainer.add(this.dogText);
 
         // Wave indicator
-        this.waveText = this.add.text(GW - 40, 42, 'Wave 0', {
-            fontFamily: 'Arial Black', fontSize: '32px', color: '#FF8844',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(1, 0);
+        this.waveText = this.add.text(GW - 40, 42, 'Wave 0',
+            font('heading', { color: '#FF8844' })).setOrigin(1, 0);
         this.hudContainer.add(this.waveText);
 
-        this.waveTimerText = this.add.text(GW - 40, 78, '', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#DDBB99',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(1, 0);
+        this.waveTimerText = this.add.text(GW - 40, 78, '',
+            font('body', { color: '#DDBB99' })).setOrigin(1, 0);
         this.hudContainer.add(this.waveTimerText);
 
         // Wave preview — inside top bar
-        this.wavePreviewText = this.add.text(GW / 2, 115, '', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFAA44',
-            stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0.5, 0);
+        this.wavePreviewText = this.add.text(GW / 2, 115, '',
+            font('heading', { color: '#FFAA44' })).setOrigin(0.5, 0);
         this.hudContainer.add(this.wavePreviewText);
 
         // Bones display
-        this.bonesText = this.add.text(GW / 2 + 60, 60, 'Bones: 0', {
-            fontFamily: 'Arial Black', fontSize: '28px', color: '#FFFFFF',
-            stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0, 0.5);
+        this.bonesText = this.add.text(GW / 2 + 60, 60, 'Bones: 0',
+            FONTS.heading).setOrigin(0, 0.5);
         this.hudContainer.add(this.bonesText);
 
         // Collect all button - draw visuals, use zone for input
@@ -264,10 +247,8 @@ class GameScene extends Phaser.Scene {
         collectBtnGfx.strokeRoundedRect(GW / 2 - 100, 155, 200, 55, 12);
         collectBtnGfx.setDepth(500).setScrollFactor(0);
 
-        const collectText = this.add.text(GW / 2, 182, 'Collect All', {
-            fontFamily: 'Arial Black', fontSize: '26px', color: '#FFFFFF',
-            stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0.5).setDepth(501).setScrollFactor(0);
+        const collectText = this.add.text(GW / 2, 182, 'Collect All',
+            FONTS.body).setOrigin(0.5).setDepth(501).setScrollFactor(0);
 
         const collectZone = this.add.zone(GW / 2, 182, 200, 55)
             .setDepth(502).setScrollFactor(0).setInteractive();
@@ -299,16 +280,12 @@ class GameScene extends Phaser.Scene {
         this.buildBarContainer.add(barBg);
 
         // Title
-        this.buildBarContainer.add(this.add.text(GW / 2, -PANEL_H + 25, 'BUILD ROOM', {
-            fontFamily: 'Arial Black', fontSize: '32px', color: '#FFD700',
-            stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0.5));
+        this.buildBarContainer.add(this.add.text(GW / 2, -PANEL_H + 25, 'BUILD ROOM',
+            font('heading', { color: '#FFD700' })).setOrigin(0.5));
 
         // Close button
-        this.buildBarContainer.add(this.add.text(GW - 50, -PANEL_H + 25, 'X', {
-            fontFamily: 'Arial Black', fontSize: '36px', color: '#FF6644',
-            stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0.5));
+        this.buildBarContainer.add(this.add.text(GW - 50, -PANEL_H + 25, 'X',
+            font('hud', { color: '#FF6644' })).setOrigin(0.5));
 
         this.buildCards = [];
         const openY = GH;
@@ -330,26 +307,20 @@ class GameScene extends Phaser.Scene {
                 this.buildBarContainer.add(g);
 
                 // Name
-                this.buildBarContainer.add(this.add.text(cx, cy - 35, def.name, {
-                    fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
-                    stroke: '#000', strokeThickness: 4,
-                }).setOrigin(0.5));
+                this.buildBarContainer.add(this.add.text(cx, cy - 35, def.name,
+                    font('body', { strokeThickness: 4 })).setOrigin(0.5));
 
                 // Cost
-                const costText = this.add.text(cx, cy + 5, '', {
-                    fontFamily: 'Arial Black', fontSize: '28px', color: '#FFD700',
-                    stroke: '#000', strokeThickness: 4,
-                }).setOrigin(0.5);
+                const costText = this.add.text(cx, cy + 5, '',
+                    font('heading', { color: '#FFD700' })).setOrigin(0.5);
                 this.buildBarContainer.add(costText);
 
                 // Stat
                 let stat = def.desc;
                 if (def.baseIncome > 0) stat = `+${def.baseIncome}/s`;
                 else if (def.baseDamage) stat = `Dmg: ${def.baseDamage}`;
-                this.buildBarContainer.add(this.add.text(cx, cy + 42, stat, {
-                    fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
-                    stroke: '#000', strokeThickness: 3,
-                }).setOrigin(0.5));
+                this.buildBarContainer.add(this.add.text(cx, cy + 42, stat,
+                    FONTS.body).setOrigin(0.5));
 
                 this.buildCards.push({ key, costText, gfx: g, screenX: cx, screenY: openY + cy });
             });
@@ -383,10 +354,8 @@ class GameScene extends Phaser.Scene {
         this.buildBtnGfx = this.add.graphics().setDepth(505).setScrollFactor(0);
         this.drawBuildButton();
 
-        this.buildBtnText = this.add.text(GW / 2, GH - 60, 'BUILD', {
-            fontFamily: 'Arial Black', fontSize: '38px', color: '#FFFFFF',
-            stroke: '#4A2800', strokeThickness: 5,
-        }).setOrigin(0.5).setDepth(506).setScrollFactor(0);
+        this.buildBtnText = this.add.text(GW / 2, GH - 60, 'BUILD',
+            font('button', { stroke: '#4A2800' })).setOrigin(0.5).setDepth(506).setScrollFactor(0);
 
         this.buildBtnZone = this.add.zone(GW / 2, GH - 60, 260, 75)
             .setDepth(507).setScrollFactor(0).setInteractive();
@@ -441,28 +410,20 @@ class GameScene extends Phaser.Scene {
         panelBg.strokeRoundedRect(-GW / 2 + 20, -170, GW - 40, 370, 16);
         this.roomPanel.add(panelBg);
 
-        this.rpName = this.add.text(0, -130, '', {
-            fontFamily: 'Arial Black', fontSize: '34px', color: '#FFD700',
-            stroke: '#000', strokeThickness: 4,
-        }).setOrigin(0.5);
+        this.rpName = this.add.text(0, -130, '',
+            font('title', { strokeThickness: 4 })).setOrigin(0.5);
         this.roomPanel.add(this.rpName);
 
-        this.rpLevel = this.add.text(0, -90, '', {
-            fontFamily: 'Arial Black', fontSize: '26px', color: '#DDDDDD',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        this.rpLevel = this.add.text(0, -90, '',
+            font('body', { color: '#DDDDDD' })).setOrigin(0.5);
         this.roomPanel.add(this.rpLevel);
 
-        this.rpStats = this.add.text(0, -50, '', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#BBEEAA',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        this.rpStats = this.add.text(0, -50, '',
+            font('body', { color: '#BBEEAA' })).setOrigin(0.5);
         this.roomPanel.add(this.rpStats);
 
-        this.rpDogs = this.add.text(0, -15, '', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#DDA050',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        this.rpDogs = this.add.text(0, -15, '',
+            font('body', { color: '#DDA050' })).setOrigin(0.5);
         this.roomPanel.add(this.rpDogs);
 
         // Upgrade button (visuals in container, zones at scene level)
@@ -473,10 +434,8 @@ class GameScene extends Phaser.Scene {
         upgBg.strokeRoundedRect(-200, 20, 190, 60, 10);
         this.roomPanel.add(upgBg);
 
-        this.rpUpgText = this.add.text(-105, 50, 'Upgrade', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFF',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        this.rpUpgText = this.add.text(-105, 50, 'Upgrade',
+            FONTS.body).setOrigin(0.5);
         this.roomPanel.add(this.rpUpgText);
 
         // Assign dog button
@@ -487,17 +446,13 @@ class GameScene extends Phaser.Scene {
         assignBg.strokeRoundedRect(10, 20, 190, 60, 10);
         this.roomPanel.add(assignBg);
 
-        this.rpAssignText = this.add.text(105, 50, 'Assign Dog', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFF',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        this.rpAssignText = this.add.text(105, 50, 'Assign Dog',
+            FONTS.body).setOrigin(0.5);
         this.roomPanel.add(this.rpAssignText);
 
         // Close button
-        const rpCloseTxt = this.add.text(GW / 2 - 50, -145, 'X', {
-            fontFamily: 'Arial Black', fontSize: '34px', color: '#FF6644',
-            stroke: '#000', strokeThickness: 4,
-        });
+        const rpCloseTxt = this.add.text(GW / 2 - 50, -145, 'X',
+            font('title', { color: '#FF6644', strokeThickness: 4 }));
         this.roomPanel.add(rpCloseTxt);
 
         // Collect from room button
@@ -508,10 +463,8 @@ class GameScene extends Phaser.Scene {
         collectPanelBg.strokeRoundedRect(-95, 95, 190, 50, 10);
         this.roomPanel.add(collectPanelBg);
 
-        this.rpCollectText = this.add.text(0, 120, 'Collect', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFF',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        this.rpCollectText = this.add.text(0, 120, 'Collect',
+            FONTS.body).setOrigin(0.5);
         this.roomPanel.add(this.rpCollectText);
 
         // Repair button
@@ -522,10 +475,8 @@ class GameScene extends Phaser.Scene {
         repairBg.strokeRoundedRect(-200, 155, 400, 55, 10);
         this.roomPanel.add(repairBg);
 
-        this.rpRepairText = this.add.text(0, 182, 'Repair: 0c', {
-            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFF',
-            stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5);
+        this.rpRepairText = this.add.text(0, 182, 'Repair: 0c',
+            FONTS.body).setOrigin(0.5);
         this.roomPanel.add(this.rpRepairText);
 
         // Scene-level zones for room panel buttons
@@ -742,11 +693,8 @@ class GameScene extends Phaser.Scene {
 
     // --- NOTIFICATIONS ---
     showNotification(text, color) {
-        const notif = this.add.text(GW / 2, 250, text, {
-            fontFamily: 'Arial Black', fontSize: '28px', color: color || '#FFFFFF',
-            stroke: '#000000', strokeThickness: 4,
-            align: 'center',
-        }).setOrigin(0.5).setDepth(550).setScrollFactor(0);
+        const notif = this.add.text(GW / 2, 250, text,
+            font('heading', { color: color || '#FFFFFF', align: 'center' })).setOrigin(0.5).setDepth(550).setScrollFactor(0);
 
         // Push existing notifications down
         this.notifications.forEach((n, i) => {

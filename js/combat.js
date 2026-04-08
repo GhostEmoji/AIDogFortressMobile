@@ -62,10 +62,7 @@ GameScene.prototype.startWave = function() {
     this.waveText.setText(`Wave ${this.wave}`);
 
     // Show wave warning
-    const warnText = this.add.text(GW / 2, GH / 2, `WAVE ${this.wave}`, {
-        fontFamily: 'Arial Black', fontSize: '72px', color: '#FF4444',
-        stroke: '#000', strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(600).setScrollFactor(0);
+    const warnText = this.add.text(GW / 2, GH / 2, `WAVE ${this.wave}`, font('giant', { color: '#FF4444' })).setOrigin(0.5).setDepth(600).setScrollFactor(0);
 
     this.tweens.add({
         targets: warnText, scaleX: 1.5, scaleY: 1.5, alpha: 0,
@@ -503,10 +500,7 @@ GameScene.prototype.killEnemy = function(enemy) {
     this.updateHUD();
 
     // Floating reward text
-    const ft = this.add.text(enemy.x, enemy.y - 30, `+${enemy.reward}`, {
-        fontFamily: 'Arial Black', fontSize: '30px', color: '#44FF88',
-        stroke: '#000', strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(100);
+    const ft = this.add.text(enemy.x, enemy.y - 30, `+${enemy.reward}`, font('heading', { color: '#44FF88' })).setOrigin(0.5).setDepth(100);
     this.tweens.add({
         targets: ft, y: ft.y - 50, alpha: 0,
         duration: 700, onComplete: () => ft.destroy(),
@@ -545,10 +539,7 @@ GameScene.prototype.waveComplete = function() {
     this.showNotification(`Wave ${this.wave} complete! +${bonus}c +${bonesReward} Bones!`, '#44FF88');
 
     // Victory text
-    const vText = this.add.text(GW / 2, GH / 2, 'WAVE CLEARED!', {
-        fontFamily: 'Arial Black', fontSize: '56px', color: '#44FF88',
-        stroke: '#000', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(600).setScrollFactor(0);
+    const vText = this.add.text(GW / 2, GH / 2, 'WAVE CLEARED!', font('big', { color: '#44FF88' })).setOrigin(0.5).setDepth(600).setScrollFactor(0);
 
     this.tweens.add({
         targets: vText, scaleX: 1.3, scaleY: 1.3, alpha: 0,

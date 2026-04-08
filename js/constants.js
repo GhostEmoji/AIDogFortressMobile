@@ -2,6 +2,31 @@
 // DOG FORTRESS - Constants & Definitions
 // ============================================================
 
+// --- FONT STYLES ---
+const FONTS = {
+    // Mega - game title on menu screen
+    mega: { fontFamily: 'Arial Black', fontSize: '120px', color: '#FFD700', stroke: '#000', strokeThickness: 12 },
+    // Giant - wave warnings, celebration text
+    giant: { fontFamily: 'Arial Black', fontSize: '72px', color: '#FFFFFF', stroke: '#000', strokeThickness: 8 },
+    // Big - wave cleared, collect-all total, big numbers
+    big: { fontFamily: 'Arial Black', fontSize: '52px', color: '#FFFFFF', stroke: '#000', strokeThickness: 6 },
+    // HUD - coin count, dog names in popups, key numbers
+    hud: { fontFamily: 'Arial Black', fontSize: '42px', color: '#FFFFFF', stroke: '#000', strokeThickness: 4 },
+    // Button - BUILD, Continue, New Game, action buttons
+    button: { fontFamily: 'Arial Black', fontSize: '38px', color: '#FFFFFF', stroke: '#000', strokeThickness: 5 },
+    // Title - popup headers, section titles
+    title: { fontFamily: 'Arial Black', fontSize: '34px', color: '#FFD700', stroke: '#000', strokeThickness: 5 },
+    // Heading - room names, dog names, labels
+    heading: { fontFamily: 'Arial Black', fontSize: '32px', color: '#FFFFFF', stroke: '#000', strokeThickness: 4 },
+    // Body - stats, descriptions, secondary info
+    body: { fontFamily: 'Arial Black', fontSize: '28px', color: '#FFFFFF', stroke: '#000', strokeThickness: 3 },
+};
+
+// Helper to clone a font style with overrides
+function font(style, overrides) {
+    return Object.assign({}, FONTS[style], overrides);
+}
+
 // --- GAME CONSTANTS ---
 const GW = 1080;
 const GH = 1920;
