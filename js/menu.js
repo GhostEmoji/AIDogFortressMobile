@@ -47,10 +47,11 @@ class MenuScene extends Phaser.Scene {
 
         // Subtitle
         this.add.text(cx, cy - 210, 'Defend. Build. Recruit.', {
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'Arial Black, Arial, sans-serif',
             fontSize: '36px',
-            color: '#C89050',
-            fontStyle: 'italic',
+            color: '#DDA060',
+            stroke: '#000',
+            strokeThickness: 4,
         }).setOrigin(0.5);
 
         this.tweens.add({

@@ -237,8 +237,8 @@ class GameScene extends Phaser.Scene {
         this.hudContainer.add(this.waveText);
 
         this.waveTimerText = this.add.text(GW - 40, 78, '', {
-            fontFamily: 'Arial', fontSize: '24px', color: '#CCAA88',
-            stroke: '#000', strokeThickness: 2,
+            fontFamily: 'Arial Black', fontSize: '24px', color: '#DDBB99',
+            stroke: '#000', strokeThickness: 3,
         }).setOrigin(1, 0);
         this.hudContainer.add(this.waveTimerText);
 
@@ -251,8 +251,8 @@ class GameScene extends Phaser.Scene {
 
         // Bones display
         this.bonesText = this.add.text(GW / 2 + 60, 60, 'Bones: 0', {
-            fontFamily: 'Arial Black', fontSize: '28px', color: '#EEDDCC',
-            stroke: '#000', strokeThickness: 3,
+            fontFamily: 'Arial Black', fontSize: '28px', color: '#FFFFFF',
+            stroke: '#000', strokeThickness: 4,
         }).setOrigin(0, 0.5);
         this.hudContainer.add(this.bonesText);
 
@@ -266,7 +266,7 @@ class GameScene extends Phaser.Scene {
 
         const collectText = this.add.text(GW / 2, 182, 'Collect All', {
             fontFamily: 'Arial Black', fontSize: '26px', color: '#FFFFFF',
-            stroke: '#000', strokeThickness: 2,
+            stroke: '#000', strokeThickness: 4,
         }).setOrigin(0.5).setDepth(501).setScrollFactor(0);
 
         const collectZone = this.add.zone(GW / 2, 182, 200, 55)
@@ -347,7 +347,7 @@ class GameScene extends Phaser.Scene {
                 if (def.baseIncome > 0) stat = `+${def.baseIncome}/s`;
                 else if (def.baseDamage) stat = `Dmg: ${def.baseDamage}`;
                 this.buildBarContainer.add(this.add.text(cx, cy + 42, stat, {
-                    fontFamily: 'Arial Black', fontSize: '22px', color: '#FFFFFF',
+                    fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
                     stroke: '#000', strokeThickness: 3,
                 }).setOrigin(0.5));
 
@@ -448,20 +448,20 @@ class GameScene extends Phaser.Scene {
         this.roomPanel.add(this.rpName);
 
         this.rpLevel = this.add.text(0, -90, '', {
-            fontFamily: 'Arial', fontSize: '26px', color: '#CCC',
-            stroke: '#000', strokeThickness: 2,
+            fontFamily: 'Arial Black', fontSize: '26px', color: '#DDDDDD',
+            stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5);
         this.roomPanel.add(this.rpLevel);
 
         this.rpStats = this.add.text(0, -50, '', {
-            fontFamily: 'Arial', fontSize: '24px', color: '#AADDAA',
-            stroke: '#000', strokeThickness: 2,
+            fontFamily: 'Arial Black', fontSize: '24px', color: '#BBEEAA',
+            stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5);
         this.roomPanel.add(this.rpStats);
 
         this.rpDogs = this.add.text(0, -15, '', {
-            fontFamily: 'Arial', fontSize: '22px', color: '#C4813D',
-            stroke: '#000', strokeThickness: 2,
+            fontFamily: 'Arial Black', fontSize: '24px', color: '#DDA050',
+            stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5);
         this.roomPanel.add(this.rpDogs);
 

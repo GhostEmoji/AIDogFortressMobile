@@ -260,7 +260,7 @@ GameScene.prototype.createRoomVisual = function(room, index) {
     container.add(lvlBg);
 
     const lvlText = this.add.text(ROOM_W / 2 - 42, -ROOM_H / 2 + 21, 'Lv.1', {
-        fontFamily: 'Arial Black', fontSize: '22px', color: '#FFD700',
+        fontFamily: 'Arial Black', fontSize: '24px', color: '#FFD700',
         stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5);
     container.add(lvlText);

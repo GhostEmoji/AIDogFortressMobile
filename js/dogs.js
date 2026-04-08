@@ -129,8 +129,8 @@ GameScene.prototype.showDogInfo = function(dog) {
     popup.add(nameText);
 
     const breedText = this.add.text(0, -145, `${dog.breed}`, {
-        fontFamily: 'Arial', fontSize: '28px', color: '#C4813D',
-        stroke: '#000', strokeThickness: 3,
+        fontFamily: 'Arial Black', fontSize: '28px', color: '#DDA050',
+        stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5);
     popup.add(breedText);
 
@@ -178,7 +178,7 @@ GameScene.prototype.showDogInfo = function(dog) {
 
         // Value text
         const valText = this.add.text(240, y, `${val}/5`, {
-            fontFamily: 'Arial Black', fontSize: '22px', color: '#FFFFFF',
+            fontFamily: 'Arial Black', fontSize: '24px', color: '#FFFFFF',
             stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5);
         popup.add(valText);
@@ -421,8 +421,8 @@ GameScene.prototype.showDogPicker = function() {
 
     if (freeDogs.length > maxVisible) {
         popup.add(this.add.text(0, listTop + maxVisible * ROW_H + 15, `+${freeDogs.length - maxVisible} more`, {
-            fontFamily: 'Arial', fontSize: '24px', color: '#888888',
-            stroke: '#000', strokeThickness: 2,
+            fontFamily: 'Arial Black', fontSize: '24px', color: '#AAAAAA',
+            stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5));
     }
 
