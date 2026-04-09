@@ -260,14 +260,21 @@ class GameScene extends Phaser.Scene {
 
     // --- BUILD BAR ---
     createBuildBar() {
-        // Show all 7 rooms directly — 4 on top row, 3 on bottom
-        const allRooms = Object.keys(ROOM_DEFS);
-        const PANEL_H = 380;
-        const cardW = 240, cardH = 140, cardGap = 12;
-        const row1 = allRooms.slice(0, 4); // quarters, kitchen, workshop, radio
-        const row2 = allRooms.slice(4);     // machinegun, cannon, sniper
+        // Tabbed build menu
+        const tabs = [
+            { id: 'turret', label: 'Weapons', color: 0x8B2222, rooms: ['machinegun', 'cannon', 'sniper'] },
+            { id: 'income', label: 'Production', color: 0x998520, rooms: ['kitchen', 'workshop'] },
+            { id: 'housing', label: 'Capacity', color: 0x8B6914, rooms: ['quarters'] },
+            { id: 'special', label: 'Comms', color: 0x2B7D50, rooms: ['radio'] },
+        ];
+        const rowH = 90, rowGap = 8, rowPad = 20;
+        const tabH = 65, tabGap = 8;
+        const maxRows = 3; // most rooms in any tab
+        const PANEL_H = 55 + tabH + 15 + maxRows * (rowH + rowGap);
 
-        this.buildBarContainer = this.add.container(0, GH + PANEL_H + 20).setDepth(510).setScrollFactor(0);
+        this.buildBarClosedY = GH + PANEL_H + 20;
+        this.buildBarContainer = this.add.container(0, this.buildBarClosedY).setDepth(510).setScrollFactor(0);
+        this.buildActiveTab = 'turret';
 
         // Background
         const barBg = this.add.graphics();
@@ -277,71 +284,90 @@ class GameScene extends Phaser.Scene {
         barBg.strokeRoundedRect(0, -PANEL_H, GW, PANEL_H + 50, { tl: 20, tr: 20, bl: 0, br: 0 });
         this.buildBarContainer.add(barBg);
 
-        // Title
-        this.buildBarContainer.add(this.add.text(GW / 2, -PANEL_H + 25, 'BUILD ROOM',
-            font('heading', { color: CLR.gold })).setOrigin(0.5));
-
         // Close button
-        makeCloseButton(this, this.buildBarContainer, GW - 55, -PANEL_H + 25);
+        makeCloseButton(this, this.buildBarContainer, GW - 55, -PANEL_H + 28);
 
-        this.buildCards = [];
-        const openY = GH;
+        // Tab buttons (in container, visual only)
+        const tabW = (GW - 100 - (tabs.length - 1) * tabGap) / tabs.length;
+        const tabY = -PANEL_H + 20;
+        this.buildTabGfx = [];
+        this.buildTabTexts = [];
 
-        const makeRow = (keys, rowIndex) => {
-            const rowW = keys.length * (cardW + cardGap) - cardGap;
-            const rowStartX = (GW - rowW) / 2;
-            const cy = -PANEL_H + 70 + rowIndex * (cardH + 14) + cardH / 2;
+        tabs.forEach((tab, i) => {
+            const tx = 20 + i * (tabW + tabGap);
+            const g = this.add.graphics();
+            this.buildBarContainer.add(g);
+            this.buildTabGfx.push({ gfx: g, x: tx, w: tabW, h: tabH, color: tab.color, id: tab.id });
 
-            keys.forEach((key, col) => {
-                const def = ROOM_DEFS[key];
-                const cx = rowStartX + col * (cardW + cardGap) + cardW / 2;
-
-                const g = this.add.graphics();
-                g.fillStyle(def.color, 0.9);
-                g.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
-                g.lineStyle(2, 0xFFFFFF, 0.3);
-                g.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
-                this.buildBarContainer.add(g);
-
-                // Name
-                this.buildBarContainer.add(this.add.text(cx, cy - 35, def.name,
-                    font('body', { strokeThickness: 4 })).setOrigin(0.5));
-
-                // Cost
-                const costText = this.add.text(cx, cy + 5, '',
-                    font('heading', { color: CLR.gold })).setOrigin(0.5);
-                this.buildBarContainer.add(costText);
-
-                // Stat
-                let stat = def.desc;
-                if (def.baseIncome > 0) stat = `+${def.baseIncome}/s`;
-                else if (def.baseDamage) stat = `Dmg: ${def.baseDamage}`;
-                this.buildBarContainer.add(this.add.text(cx, cy + 42, stat,
-                    FONTS.body).setOrigin(0.5));
-
-                this.buildCards.push({ key, costText, gfx: g, screenX: cx, screenY: openY + cy });
-            });
-        };
-
-        makeRow(row1, 0);
-        makeRow(row2, 1);
-
-        // Scene-level interactive zones
-        this.buildCardZones = [];
-        this.buildCards.forEach(card => {
-            const zone = this.add.zone(card.screenX, card.screenY, cardW, cardH)
-                .setDepth(520).setScrollFactor(0).setInteractive();
-            zone.on('pointerdown', () => { if (this.buildMenuOpen) card.gfx.setAlpha(0.6); });
-            zone.on('pointerup', () => {
-                card.gfx.setAlpha(1);
-                if (this.buildMenuOpen) this.buildRoom(card.key);
-            });
-            zone.on('pointerout', () => card.gfx.setAlpha(1));
-            zone.disableInteractive();
-            this.buildCardZones.push(zone);
+            const txt = this.add.text(tx + tabW / 2, tabY + tabH / 2, tab.label, FONTS.body).setOrigin(0.5);
+            this.buildBarContainer.add(txt);
+            this.buildTabTexts.push(txt);
         });
 
-        // Close zone
+        // Room rows container (inside buildBarContainer)
+        this.buildRowsY = tabY + tabH + 15;
+        const rowW = GW - rowPad * 2;
+
+        // Create all room rows (hidden by default, shown per tab)
+        this.buildCards = [];
+        this.buildCardZones = [];
+        const openY = GH;
+
+        tabs.forEach(tab => {
+            tab.rooms.forEach((key, ri) => {
+                const def = ROOM_DEFS[key];
+                const cy = this.buildRowsY + ri * (rowH + rowGap) + rowH / 2;
+                const lx = rowPad;
+
+                const g = this.add.graphics();
+                g.fillStyle(tab.color);
+                g.fillRoundedRect(lx, cy, rowW, rowH, 12);
+                this.buildBarContainer.add(g);
+
+                const nameTxt = this.add.text(lx + 20, cy + rowH / 2 - 15, def.name, FONTS.heading).setOrigin(0, 0.5);
+                this.buildBarContainer.add(nameTxt);
+
+                const descTxt = this.add.text(lx + 20, cy + rowH / 2 + 20, def.desc, FONTS.body).setOrigin(0, 0.5);
+                this.buildBarContainer.add(descTxt);
+
+                const costText = this.add.text(GW - rowPad - 20, cy + rowH / 2, '', font('heading', { color: CLR.gold })).setOrigin(1, 0.5);
+                this.buildBarContainer.add(costText);
+
+                const zone = this.add.zone(GW / 2, openY + cy + rowH / 2, rowW, rowH)
+                    .setDepth(520).setScrollFactor(0).setInteractive();
+                zone.on('pointerdown', () => { if (this.buildMenuOpen) g.setAlpha(0.6); });
+                zone.on('pointerup', () => {
+                    g.setAlpha(1);
+                    if (this.buildMenuOpen) this.buildRoom(key);
+                });
+                zone.on('pointerout', () => g.setAlpha(1));
+                zone.disableInteractive();
+
+                this.buildCards.push({ key, costText, gfx: g, nameTxt, descTxt, zone, tab: tab.id });
+                this.buildCardZones.push(zone);
+            });
+        });
+
+        // Tab scene-level zones
+        this.buildTabZones = [];
+        tabs.forEach((tab, i) => {
+            const tx = 20 + i * (tabW + tabGap);
+            const zone = this.add.zone(tx + tabW / 2, openY + tabY + tabH / 2, tabW, tabH)
+                .setDepth(520).setScrollFactor(0).setInteractive();
+            zone.on('pointerup', () => {
+                if (this.buildMenuOpen) {
+                    this.buildActiveTab = tab.id;
+                    this.refreshBuildTabs();
+                }
+            });
+            zone.disableInteractive();
+            this.buildTabZones.push(zone);
+        });
+
+        // Draw initial tab state
+        this.buildTabs = tabs;
+        this.refreshBuildTabs();
+
         // Fullscreen zone behind build menu — tap outside to close
         this.buildCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
             .setDepth(509).setScrollFactor(0).setInteractive();
@@ -363,6 +389,42 @@ class GameScene extends Phaser.Scene {
             this.toggleBuildMenu();
         });
         this.buildBtnZone.on('pointerout', () => this.buildBtnGfx.setAlpha(1));
+    }
+
+    refreshBuildTabs() {
+        const active = this.buildActiveTab;
+
+        // Redraw tab backgrounds
+        this.buildTabGfx.forEach(t => {
+            t.gfx.clear();
+            const isActive = t.id === active;
+            t.gfx.fillStyle(isActive ? t.color : 0x333333);
+            const tabY = this.buildTabs ? -this.buildBarContainer.list[0].y || 0 : 0;
+            t.gfx.fillRoundedRect(t.x, this.buildTabGfx[0].gfx.y || -this.buildBarClosedY + GH + 20, t.w, t.h, 10);
+        });
+
+        // Simpler approach: just redraw all tab bgs at fixed positions
+        const tabY = -(55 + 65 + 15 + 3 * (90 + 8)) + 20; // -PANEL_H + 20
+        this.buildTabGfx.forEach(t => {
+            t.gfx.clear();
+            const isActive = t.id === active;
+            t.gfx.fillStyle(isActive ? t.color : 0x333333);
+            t.gfx.fillRoundedRect(t.x, tabY, t.w, t.h, 10);
+        });
+
+        // Show/hide room rows based on active tab
+        this.buildCards.forEach(card => {
+            const visible = card.tab === active;
+            card.gfx.setVisible(visible);
+            card.nameTxt.setVisible(visible);
+            card.descTxt.setVisible(visible);
+            card.costText.setVisible(visible);
+            if (visible) {
+                card.zone.setInteractive();
+            } else {
+                card.zone.disableInteractive();
+            }
+        });
     }
 
     drawBuildButton(y) {
@@ -481,8 +543,6 @@ class GameScene extends Phaser.Scene {
             const room = this.rooms[this.selectedRoom];
             if (ROOM_DEFS[room.type].category === 'turret') {
                 room.targetMode = ((room.targetMode || 0) + 1) % 4;
-                const modes = ['Closest', 'Strongest', 'Weakest', 'Flying'];
-                this.showNotification(`Targeting: ${modes[room.targetMode]}`, CLR.orange);
                 this.updateRoomPanel();
             } else {
                 this.collectCoins(this.selectedRoom);
@@ -622,22 +682,26 @@ class GameScene extends Phaser.Scene {
 
         if (this.buildMenuOpen) {
             if (this.roomPanelOpen) this.hideRoomPanel();
+            this.refreshBuildTabs();
             this.tweens.add({
                 targets: this.buildBarContainer, y: GH,
                 duration: 300, ease: 'Back.easeOut',
             });
             this.setBuildButtonAlpha(0);
-            // Enable card & close zones
+            // Enable zones
             this.buildCardZones.forEach(z => z.setInteractive());
+            this.buildTabZones.forEach(z => z.setInteractive());
             this.buildCloseZone.setInteractive();
+            this.refreshBuildTabs(); // show/hide rows for active tab
         } else {
             this.tweens.add({
-                targets: this.buildBarContainer, y: GH + 400,
+                targets: this.buildBarContainer, y: this.buildBarClosedY,
                 duration: 200, ease: 'Power2',
             });
             this.setBuildButtonAlpha(1);
-            // Disable card & close zones
+            // Disable all zones
             this.buildCardZones.forEach(z => z.disableInteractive());
+            this.buildTabZones.forEach(z => z.disableInteractive());
             this.buildCloseZone.disableInteractive();
         }
     }

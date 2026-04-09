@@ -656,6 +656,7 @@ GameScene.prototype.updateRoomPanel = function() {
     this.rpHp.setText(`HP: ${hpPct}%`);
     this.rpHp.setColor(hpColor);
 
+    // Stats
     if (def.category === 'turret') {
         const dmg = Math.floor(def.baseDamage * room.level * this.getRoomDogBonus(room) * hpMult);
         this.rpStats.setText(`Damage: ${dmg}  |  Rate: ${(def.fireRate / 1000).toFixed(1)}s  |  Range: ${def.range}`);
@@ -667,20 +668,42 @@ GameScene.prototype.updateRoomPanel = function() {
         this.rpStats.setText(def.desc);
     }
 
-    const roomSkill = ROOM_SKILL_MAP[room.type] || 'production';
-    const dreamCount = room.dogs.filter(d => d.dreamSkill === roomSkill).length;
-    const repairRate = this.getRoomRepairRate(room);
-    let dogInfo = `Dogs: ${room.dogs.length}`;
-    if (dreamCount > 0) dogInfo += ` (${dreamCount} in dream room)`;
-    if (repairRate > 0) dogInfo += ` | Repair: ${repairRate.toFixed(1)} HP/s`;
-    this.rpDogs.setText(dogInfo);
+    // Dogs line with bonus info
+    const needsDog = def.category !== 'housing';
+    const dogBonus = this.getRoomDogBonus(room);
+    const bonusPct = Math.round((dogBonus - 1) * 100);
+    if (!needsDog) {
+        this.rpDogs.setText('No dogs needed');
+        this.rpDogs.setColor(CLR.white);
+    } else if (room.dogs.length === 0) {
+        this.rpDogs.setText('INACTIVE - Assign a dog!');
+        this.rpDogs.setColor(CLR.danger);
+    } else {
+        let dogInfo = `Dogs: ${room.dogs.length}/3 (bonus: +${bonusPct}%)`;
+        const repairRate = this.getRoomRepairRate(room);
+        if (repairRate > 0) dogInfo += ` | Repair: ${repairRate.toFixed(1)}/s`;
+        this.rpDogs.setText(dogInfo);
+        this.rpDogs.setColor(CLR.success);
+    }
 
+    // Upgrade button with preview
     const upgCost = this.getUpgradeCost(room);
-    this.rpUpgText.setText(`Upgrade: ${upgCost}c`);
+    const nextLevel = room.level + 1;
+    if (def.category === 'turret') {
+        const nextDmg = Math.floor(def.baseDamage * nextLevel);
+        this.rpUpgText.setText(`Upgrade: ${upgCost}c (Dmg ${def.baseDamage * room.level}->${nextDmg})`);
+    } else if (def.baseIncome > 0) {
+        const nextIncome = def.baseIncome * nextLevel;
+        this.rpUpgText.setText(`Upgrade: ${upgCost}c (${def.baseIncome * room.level}->${nextIncome}/s)`);
+    } else {
+        this.rpUpgText.setText(`Upgrade: ${upgCost}c`);
+    }
+
+    // Assign / Target buttons
     this.rpAssignText.setText('Assign Dog');
     if (def.category === 'turret') {
         const modes = ['Closest', 'Strongest', 'Weakest', 'Flying'];
-        this.rpCollectText.setText(`Target: ${modes[room.targetMode || 0]}`);
+        this.rpCollectText.setText(`< ${modes[room.targetMode || 0]} >`);
     } else {
         this.rpCollectText.setText(`Collect: ${Math.floor(room.accumulated)}c`);
     }

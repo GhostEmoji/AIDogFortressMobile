@@ -70,7 +70,7 @@ GameScene.prototype.startWave = function() {
     });
 
     // Determine enemies for this wave
-    const numEnemies = Math.min(4 + this.wave * 2, 40);
+    const numEnemies = Math.min(Math.floor(3 + this.wave * 1.5), 25);
     this.enemiesAlive = numEnemies;
 
     const spawnDelay = Math.max(300, 1800 - this.wave * 60);
@@ -103,8 +103,8 @@ GameScene.prototype.startWave = function() {
 
 GameScene.prototype.spawnEnemy = function(type, side) {
     const def = ENEMY_DEFS[type];
-    const hpScale = 1 + (this.wave - 1) * 0.25;
-    const speedScale = 1 + (this.wave - 1) * 0.07;
+    const hpScale = 1 + (this.wave - 1) * 0.15;
+    const speedScale = 1 + (this.wave - 1) * 0.04;
 
     const texKey = 'enemy_' + type;
     const x = side === 'left' ? -def.size : GW + def.size;
@@ -211,7 +211,7 @@ GameScene.prototype.updateEnemies = function(delta) {
             // --- AT FORTRESS: ATTACK ROOMS ---
             if (e.flying) {
                 // Flying enemies circle near fortress and attack their target room
-                const circleAmp = 180;
+                const circleAmp = 350;
                 const circleSpd = 0.001 + (e.type === 'drone' ? 0.001 : 0);
                 e.x = FORT_CX + circleAmp * Math.sin(time * circleSpd + e.phaseOffset);
                 e.y = e.baseY + Math.sin(time * 0.003 + e.phaseOffset) * 20;

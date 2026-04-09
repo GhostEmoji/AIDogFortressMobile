@@ -70,30 +70,30 @@ const ROOM_DEFS = {
         baseCost: 40, baseIncome: 0, category: 'housing',
     },
     kitchen: {
-        name: 'Kitchen', desc: 'Cook food for coins', color: 0xE8B84B, colorDark: 0xB8922E,
+        name: 'Kitchen', desc: '6 coins/s (needs dog)', color: 0xE8B84B, colorDark: 0xB8922E,
         baseCost: 120, baseIncome: 6, category: 'income',
     },
     workshop: {
-        name: 'Workshop', desc: 'Craft goods', color: 0x7B8FA1, colorDark: 0x566A7A,
+        name: 'Workshop', desc: '14 coins/s (needs dog)', color: 0x7B8FA1, colorDark: 0x566A7A,
         baseCost: 250, baseIncome: 14, category: 'income',
     },
     radio: {
-        name: 'Radio Tower', desc: 'Recruit dogs', color: 0x3DAE6F, colorDark: 0x2B7D50,
+        name: 'Radio Tower', desc: 'Recruits dogs (needs dog)', color: 0x3DAE6F, colorDark: 0x2B7D50,
         baseCost: 150, baseIncome: 1, category: 'special',
         recruitInterval: 15000,
     },
     machinegun: {
-        name: 'MG Turret', desc: 'Fast fire', color: 0xB83C3C, colorDark: 0x7A2828,
+        name: 'Machine Gun', desc: 'Fast fire, short range (needs dog)', color: 0xB83C3C, colorDark: 0x7A2828,
         baseCost: 150, baseIncome: 0, category: 'turret',
         baseDamage: 10, fireRate: 400, range: 550,
     },
     cannon: {
-        name: 'Cannon', desc: 'Heavy damage', color: 0x6B2D2D, colorDark: 0x4A1A1A,
+        name: 'Cannon', desc: 'Slow, heavy damage (needs dog)', color: 0x6B2D2D, colorDark: 0x4A1A1A,
         baseCost: 300, baseIncome: 0, category: 'turret',
         baseDamage: 40, fireRate: 1600, range: 650,
     },
     sniper: {
-        name: 'Sniper Nest', desc: 'Long range', color: 0x5B4B9E, colorDark: 0x3E336D,
+        name: 'Sniper Nest', desc: 'Long range precision (needs dog)', color: 0x5B4B9E, colorDark: 0x3E336D,
         baseCost: 400, baseIncome: 0, category: 'turret',
         baseDamage: 60, fireRate: 2200, range: 950,
     },
