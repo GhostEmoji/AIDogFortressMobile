@@ -123,18 +123,18 @@ GameScene.prototype.showDogInfo = function(dog) {
 
     // Dog name & breed
     const nameText = this.add.text(0, -190, `${dog.name}`,
-        font('button', { color: '#FFD700' })
+        font('button', { color: CLR.gold })
     ).setOrigin(0.5);
     popup.add(nameText);
 
     const breedText = this.add.text(0, -145, `${dog.breed}`,
-        font('heading', { color: '#DDA050' })
+        font('heading', { color: CLR.brown })
     ).setOrigin(0.5);
     popup.add(breedText);
 
     if (isDream) {
         const dreamText = this.add.text(0, -110, 'IN DREAM ROOM! x2 BONUS',
-            font('body', { color: '#FFD700' })
+            font('body', { color: CLR.gold })
         ).setOrigin(0.5);
         popup.add(dreamText);
     }
@@ -155,7 +155,7 @@ GameScene.prototype.showDogInfo = function(dog) {
 
         // Label
         const label = this.add.text(-240, y, sk.label,
-            font('body', { color: isRoomSkill ? '#FFFFFF' : '#AAAAAA' })
+            font('body', { color: isRoomSkill ? CLR.white : CLR.muted })
         ).setOrigin(0, 0.5);
         popup.add(label);
 
@@ -178,30 +178,26 @@ GameScene.prototype.showDogInfo = function(dog) {
         // Dream indicator
         if (sk.key === dog.dreamSkill) {
             const star = this.add.text(-260, y, '*',
-                font('heading', { color: '#FFD700', strokeThickness: 3 })
+                font('heading', { color: CLR.gold, strokeThickness: 3 })
             ).setOrigin(0.5);
             popup.add(star);
         }
     });
 
+    // Close button (top right of panel)
+    makeCloseButton(this, popup, 245, -195);
+
     // Unassign button (only if dog is assigned)
     if (dog.assignedRoom >= 0) {
         const unBg = this.add.graphics();
-        unBg.fillStyle(0x993333);
-        unBg.fillRoundedRect(-150, 160, 300, 55, 10);
-        unBg.lineStyle(2, 0xCC4444);
-        unBg.strokeRoundedRect(-150, 160, 300, 55, 10);
+        unBg.fillStyle(0x555555);
+        unBg.fillRoundedRect(-150, 160, 300, 55, 12);
         popup.add(unBg);
 
         const unText = this.add.text(0, 187, 'Unassign Dog',
             FONTS.body
         ).setOrigin(0.5);
         popup.add(unText);
-    } else {
-        const closeText = this.add.text(0, 190, 'TAP TO CLOSE',
-            font('body', { color: '#AAAAAA' })
-        ).setOrigin(0.5);
-        popup.add(closeText);
     }
 
     // Scene-level zones for close + unassign
@@ -315,8 +311,9 @@ GameScene.prototype.showDogPicker = function() {
     panel.strokeRoundedRect(-panelW / 2, panelTop, panelW, panelH, 16);
     popup.add(panel);
 
-    // Title
+    // Title + close button
     popup.add(this.add.text(0, panelTop + 25, 'Choose a Dog', FONTS.title).setOrigin(0.5));
+    makeCloseButton(this, popup, panelW / 2 - 55, panelTop + 25);
 
     // Column headers
     const headerY = panelTop + 70;
@@ -330,7 +327,7 @@ GameScene.prototype.showDogPicker = function() {
     hdrs.forEach(h => {
         const isNeeded = h.skill === roomSkill;
         popup.add(this.add.text(h.x, headerY, h.label,
-            font('body', { color: isNeeded ? '#FFFFFF' : '#999999' })
+            font('body', { color: isNeeded ? CLR.white : CLR.muted })
         ).setOrigin(0.5));
         if (isNeeded) {
             // Underline the needed skill
@@ -367,7 +364,7 @@ GameScene.prototype.showDogPicker = function() {
         // Name + breed
         popup.add(this.add.text(-panelW / 2 + 100, y - 25, dog.name, FONTS.heading));
         popup.add(this.add.text(-panelW / 2 + 100, y + 10, dog.breed + (isDream ? '  DREAM!' : ''),
-            font('body', { color: isDream ? '#FFD700' : '#C4813D' })
+            font('body', { color: isDream ? CLR.gold : CLR.brown })
         ));
 
         // 4 skill numbers, color-coded, bigger if it's the room's needed skill
@@ -399,7 +396,7 @@ GameScene.prototype.showDogPicker = function() {
 
     if (freeDogs.length > maxVisible) {
         popup.add(this.add.text(0, listTop + maxVisible * ROW_H + 15, `+${freeDogs.length - maxVisible} more`,
-            font('body', { color: '#AAAAAA' })
+            font('body', { color: CLR.muted })
         ).setOrigin(0.5));
     }
 
@@ -509,7 +506,7 @@ GameScene.prototype.updateLobbyDogs = function() {
         const moreText = this.add.text(
             FORT_CX + ROOM_W / 2 - 20, lobbyY + BASE_H / 2 - 30,
             `+${freeDogs.length - maxShow}`,
-            font('body', { color: '#AAAAAA' })
+            font('body', { color: CLR.muted })
         ).setOrigin(1, 0.5).setDepth(11);
         this.lobbyDogSprites.push(moreText);
     }
@@ -550,7 +547,7 @@ GameScene.prototype.tryLostDogMission = function() {
         FORT_CX + Phaser.Math.Between(-ROOM_W / 3, ROOM_W / 3),
         ry + ROOM_H / 2,
         '?',
-        font('button', { color: '#FFAA00', strokeThickness: 4 })
+        font('button', { color: CLR.orange, strokeThickness: 4 })
     ).setOrigin(0.5).setDepth(26);
     this.tweens.add({
         targets: pawIcon, y: pawIcon.y - 8, duration: 400,

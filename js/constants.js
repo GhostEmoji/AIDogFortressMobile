@@ -2,6 +2,17 @@
 // DOG FORTRESS - Constants & Definitions
 // ============================================================
 
+// --- TEXT COLORS (semantic) ---
+const CLR = {
+    gold: '#FFD700',     // coins, titles, important highlights
+    white: '#FFFFFF',    // primary text (default)
+    muted: '#AAAAAA',    // disabled, secondary, "tap to close"
+    danger: '#FF4444',   // damage taken, warnings, wave incoming
+    success: '#44FF88',  // rewards, positive, wave cleared
+    orange: '#FFAA44',   // wave preview, breed names, warm accent
+    brown: '#DDA050',    // dog-related, secondary warm
+};
+
 // --- FONT STYLES ---
 const FONTS = {
     // Mega - game title on menu screen
@@ -25,6 +36,19 @@ const FONTS = {
 // Helper to clone a font style with overrides
 function font(style, overrides) {
     return Object.assign({}, FONTS[style], overrides);
+}
+
+// --- UI COMPONENTS ---
+// Creates a red close button (graphics + text) and adds to a container. Returns { width, height } for zone positioning.
+function makeCloseButton(scene, container, x, y) {
+    const w = 70, h = 55, r = 10;
+    const bg = scene.add.graphics();
+    bg.fillStyle(0x771111);
+    bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, r);
+    container.add(bg);
+    const txt = scene.add.text(x, y, 'X', FONTS.body).setOrigin(0.5);
+    container.add(txt);
+    return { w, h };
 }
 
 // --- GAME CONSTANTS ---

@@ -38,7 +38,7 @@ class MenuScene extends Phaser.Scene {
         const title = this.add.text(cx, cy - 350, 'DOG\nFORTRESS', font('mega', { align: 'center', lineSpacing: -10 })).setOrigin(0.5);
 
         // Subtitle
-        this.add.text(cx, cy - 210, 'Defend. Build. Recruit.', font('hud', { color: '#DDA060' })).setOrigin(0.5);
+        this.add.text(cx, cy - 210, 'Defend. Build. Recruit.', font('hud', { color: CLR.orange })).setOrigin(0.5);
 
         this.tweens.add({
             targets: title, y: title.y - 10, duration: 2000,

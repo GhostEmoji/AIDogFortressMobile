@@ -197,60 +197,58 @@ class GameScene extends Phaser.Scene {
         // Top bar background
         const topBar = this.add.graphics();
         topBar.fillStyle(0x1A0A00, 0.9);
-        topBar.fillRoundedRect(10, 10, GW - 20, 130, 16);
+        topBar.fillRoundedRect(10, 10, GW - 20, 140, 16);
         topBar.lineStyle(3, 0x8B6914);
-        topBar.strokeRoundedRect(10, 10, GW - 20, 130, 16);
+        topBar.strokeRoundedRect(10, 10, GW - 20, 140, 16);
         this.hudContainer.add(topBar);
 
-        // Coin icon
-        const coinIcon = this.add.image(60, 60, 'coin').setScale(1.8);
-        this.hudContainer.add(coinIcon);
+        // Row 1: Coins | Dogs | Bones | Wave
+        const row1Y = 50;
+        const row2Y = 105;
 
-        // Coin text
-        this.coinText = this.add.text(90, 60, '500',
-            font('hud', { color: '#FFD700' })).setOrigin(0, 0.5);
+        // Coins (left)
+        const coinIcon = this.add.image(45, row1Y, 'coin').setScale(1.5);
+        this.hudContainer.add(coinIcon);
+        this.coinText = this.add.text(70, row1Y, '500',
+            font('hud', { color: CLR.gold })).setOrigin(0, 0.5);
         this.hudContainer.add(this.coinText);
 
-        // Dog count
-        this.dogIcon = this.add.text(420, 50, 'Dogs:',
-            font('heading', { color: '#C4813D', strokeThickness: 3 })).setOrigin(0.5);
-        this.hudContainer.add(this.dogIcon);
-
-        this.dogText = this.add.text(480, 60, '1',
-            FONTS.hud).setOrigin(0, 0.5);
+        // Dogs (center-left)
+        this.dogText = this.add.text(360, row1Y, 'Dogs: 1',
+            FONTS.heading).setOrigin(0, 0.5);
         this.hudContainer.add(this.dogText);
 
-        // Wave indicator
-        this.waveText = this.add.text(GW - 40, 42, 'Wave 0',
-            font('heading', { color: '#FF8844' })).setOrigin(1, 0);
-        this.hudContainer.add(this.waveText);
-
-        this.waveTimerText = this.add.text(GW - 40, 78, '',
-            font('body', { color: '#DDBB99' })).setOrigin(1, 0);
-        this.hudContainer.add(this.waveTimerText);
-
-        // Wave preview — inside top bar
-        this.wavePreviewText = this.add.text(GW / 2, 115, '',
-            font('heading', { color: '#FFAA44' })).setOrigin(0.5, 0);
-        this.hudContainer.add(this.wavePreviewText);
-
-        // Bones display
-        this.bonesText = this.add.text(GW / 2 + 60, 60, 'Bones: 0',
+        // Bones (center-right)
+        this.bonesText = this.add.text(600, row1Y, 'Bones: 0',
             FONTS.heading).setOrigin(0, 0.5);
         this.hudContainer.add(this.bonesText);
+
+        // Wave (right)
+        this.waveText = this.add.text(GW - 30, row1Y, 'Wave 0',
+            FONTS.heading).setOrigin(1, 0.5);
+        this.hudContainer.add(this.waveText);
+
+        // Row 2: Wave preview (left) | Wave timer (right)
+        this.wavePreviewText = this.add.text(30, row2Y, '',
+            font('body', { color: CLR.orange })).setOrigin(0, 0);
+        this.hudContainer.add(this.wavePreviewText);
+
+        this.waveTimerText = this.add.text(GW - 30, row2Y, '',
+            font('body', { color: CLR.orange })).setOrigin(1, 0);
+        this.hudContainer.add(this.waveTimerText);
 
         // Collect all button - draw visuals, use zone for input
         const collectBtnGfx = this.add.graphics();
         collectBtnGfx.fillStyle(0x2E7D32);
-        collectBtnGfx.fillRoundedRect(GW / 2 - 100, 155, 200, 55, 12);
+        collectBtnGfx.fillRoundedRect(GW / 2 - 100, 170, 200, 55, 12);
         collectBtnGfx.lineStyle(2, 0x4CAF50);
-        collectBtnGfx.strokeRoundedRect(GW / 2 - 100, 155, 200, 55, 12);
+        collectBtnGfx.strokeRoundedRect(GW / 2 - 100, 170, 200, 55, 12);
         collectBtnGfx.setDepth(500).setScrollFactor(0);
 
-        const collectText = this.add.text(GW / 2, 182, 'Collect All',
+        const collectText = this.add.text(GW / 2, 197, 'Collect All',
             FONTS.body).setOrigin(0.5).setDepth(501).setScrollFactor(0);
 
-        const collectZone = this.add.zone(GW / 2, 182, 200, 55)
+        const collectZone = this.add.zone(GW / 2, 197, 200, 55)
             .setDepth(502).setScrollFactor(0).setInteractive();
         collectZone.on('pointerdown', () => collectBtnGfx.setAlpha(0.7));
         collectZone.on('pointerup', () => {
@@ -281,11 +279,10 @@ class GameScene extends Phaser.Scene {
 
         // Title
         this.buildBarContainer.add(this.add.text(GW / 2, -PANEL_H + 25, 'BUILD ROOM',
-            font('heading', { color: '#FFD700' })).setOrigin(0.5));
+            font('heading', { color: CLR.gold })).setOrigin(0.5));
 
         // Close button
-        this.buildBarContainer.add(this.add.text(GW - 50, -PANEL_H + 25, 'X',
-            font('hud', { color: '#FF6644' })).setOrigin(0.5));
+        makeCloseButton(this, this.buildBarContainer, GW - 55, -PANEL_H + 25);
 
         this.buildCards = [];
         const openY = GH;
@@ -312,7 +309,7 @@ class GameScene extends Phaser.Scene {
 
                 // Cost
                 const costText = this.add.text(cx, cy + 5, '',
-                    font('heading', { color: '#FFD700' })).setOrigin(0.5);
+                    font('heading', { color: CLR.gold })).setOrigin(0.5);
                 this.buildBarContainer.add(costText);
 
                 // Stat
@@ -345,8 +342,9 @@ class GameScene extends Phaser.Scene {
         });
 
         // Close zone
-        this.buildCloseZone = this.add.zone(GW - 50, openY + (-PANEL_H + 25), 80, 60)
-            .setDepth(520).setScrollFactor(0).setInteractive();
+        // Fullscreen zone behind build menu — tap outside to close
+        this.buildCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
+            .setDepth(509).setScrollFactor(0).setInteractive();
         this.buildCloseZone.on('pointerup', () => { if (this.buildMenuOpen) this.toggleBuildMenu(); });
         this.buildCloseZone.disableInteractive();
 
@@ -403,125 +401,104 @@ class GameScene extends Phaser.Scene {
     createRoomPanel() {
         this.roomPanel = this.add.container(GW / 2, GH + 300).setDepth(520).setScrollFactor(0);
 
+        const PW = GW - 80; // panel inner width
+        const btnW = (PW - 30) / 2; // two buttons per row with gap
+        const btnH = 60;
+        const btnR = 12;
+
         const panelBg = this.add.graphics();
         panelBg.fillStyle(0x2A1500, 0.95);
-        panelBg.fillRoundedRect(-GW / 2 + 20, -170, GW - 40, 370, 16);
-        panelBg.lineStyle(3, 0xDAA520);
-        panelBg.strokeRoundedRect(-GW / 2 + 20, -170, GW - 40, 370, 16);
+        panelBg.fillRoundedRect(-PW / 2 - 10, -180, PW + 20, 400, 16);
+        panelBg.lineStyle(3, 0x8B6914);
+        panelBg.strokeRoundedRect(-PW / 2 - 10, -180, PW + 20, 400, 16);
         this.roomPanel.add(panelBg);
 
-        this.rpName = this.add.text(0, -130, '',
-            font('title', { strokeThickness: 4 })).setOrigin(0.5);
+        // Close button (top right)
+        makeCloseButton(this, this.roomPanel, PW / 2 - 25, -150);
+
+        // Info text — all white except title gold
+        this.rpName = this.add.text(0, -150, '', FONTS.title).setOrigin(0.5);
         this.roomPanel.add(this.rpName);
 
-        this.rpLevel = this.add.text(0, -90, '',
-            font('body', { color: '#DDDDDD' })).setOrigin(0.5);
+        this.rpLevel = this.add.text(-10, -110, '', FONTS.body).setOrigin(1, 0.5);
         this.roomPanel.add(this.rpLevel);
 
-        this.rpStats = this.add.text(0, -50, '',
-            font('body', { color: '#BBEEAA' })).setOrigin(0.5);
+        this.rpHp = this.add.text(10, -110, '', FONTS.body).setOrigin(0, 0.5);
+        this.roomPanel.add(this.rpHp);
+
+        this.rpStats = this.add.text(0, -72, '', FONTS.body).setOrigin(0.5);
         this.roomPanel.add(this.rpStats);
 
-        this.rpDogs = this.add.text(0, -15, '',
-            font('body', { color: '#DDA050' })).setOrigin(0.5);
+        this.rpDogs = this.add.text(0, -38, '', FONTS.body).setOrigin(0.5);
         this.roomPanel.add(this.rpDogs);
 
-        // Upgrade button (visuals in container, zones at scene level)
-        const upgBg = this.add.graphics();
-        upgBg.fillStyle(0x2E7D32);
-        upgBg.fillRoundedRect(-200, 20, 190, 60, 10);
-        upgBg.lineStyle(2, 0x4CAF50);
-        upgBg.strokeRoundedRect(-200, 20, 190, 60, 10);
-        this.roomPanel.add(upgBg);
+        // Row 1 buttons: Upgrade | Assign Dog
+        const row1Y = 15;
+        const makeBtn = (x, y, w, h, color, label) => {
+            const bg = this.add.graphics();
+            bg.fillStyle(color);
+            bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, btnR);
+            this.roomPanel.add(bg);
+            const txt = this.add.text(x, y, label, FONTS.body).setOrigin(0.5);
+            this.roomPanel.add(txt);
+            return txt;
+        };
 
-        this.rpUpgText = this.add.text(-105, 50, 'Upgrade',
-            FONTS.body).setOrigin(0.5);
-        this.roomPanel.add(this.rpUpgText);
+        this.rpUpgText = makeBtn(-PW / 4, row1Y, btnW, btnH, 0x2E7D32, 'Upgrade');
+        this.rpAssignText = makeBtn(PW / 4, row1Y, btnW, btnH, 0x2E7D32, 'Assign Dog');
 
-        // Assign dog button
-        const assignBg = this.add.graphics();
-        assignBg.fillStyle(0xC4813D);
-        assignBg.fillRoundedRect(10, 20, 190, 60, 10);
-        assignBg.lineStyle(2, 0xE8A040);
-        assignBg.strokeRoundedRect(10, 20, 190, 60, 10);
-        this.roomPanel.add(assignBg);
-
-        this.rpAssignText = this.add.text(105, 50, 'Assign Dog',
-            FONTS.body).setOrigin(0.5);
-        this.roomPanel.add(this.rpAssignText);
-
-        // Close button
-        const rpCloseTxt = this.add.text(GW / 2 - 50, -145, 'X',
-            font('title', { color: '#FF6644', strokeThickness: 4 }));
-        this.roomPanel.add(rpCloseTxt);
-
-        // Collect from room button
-        const collectPanelBg = this.add.graphics();
-        collectPanelBg.fillStyle(0xDAA520);
-        collectPanelBg.fillRoundedRect(-95, 95, 190, 50, 10);
-        collectPanelBg.lineStyle(2, 0xFFD700);
-        collectPanelBg.strokeRoundedRect(-95, 95, 190, 50, 10);
-        this.roomPanel.add(collectPanelBg);
-
-        this.rpCollectText = this.add.text(0, 120, 'Collect',
-            FONTS.body).setOrigin(0.5);
-        this.roomPanel.add(this.rpCollectText);
-
-        // Repair button
-        const repairBg = this.add.graphics();
-        repairBg.fillStyle(0x2277CC);
-        repairBg.fillRoundedRect(-200, 155, 400, 55, 10);
-        repairBg.lineStyle(2, 0x44AAFF);
-        repairBg.strokeRoundedRect(-200, 155, 400, 55, 10);
-        this.roomPanel.add(repairBg);
-
-        this.rpRepairText = this.add.text(0, 182, 'Repair: 0c',
-            FONTS.body).setOrigin(0.5);
-        this.roomPanel.add(this.rpRepairText);
+        // Row 2 buttons: Collect/Target | Repair
+        const row2Y = 90;
+        this.rpCollectText = makeBtn(-PW / 4, row2Y, btnW, btnH, 0x555555, 'Collect');
+        this.rpRepairText = makeBtn(PW / 4, row2Y, btnW, btnH, 0x555555, 'Repair');
 
         // Scene-level zones for room panel buttons
-        const rpOpenY = GH - 210; // panel y when open
-        const rpCX = GW / 2;     // panel center x
+        const rpOpenY = GH - 210;
+        const rpCX = GW / 2;
 
-        this.rpUpgZone = this.add.zone(rpCX - 105, rpOpenY + 50, 190, 60)
+        this.rpUpgZone = this.add.zone(rpCX - PW / 4, rpOpenY + row1Y, btnW, btnH)
             .setDepth(530).setScrollFactor(0).setInteractive();
         this.rpUpgZone.on('pointerup', () => {
             if (this.roomPanelOpen) this.upgradeSelectedRoom();
         });
 
-        this.rpAssignZone = this.add.zone(rpCX + 105, rpOpenY + 50, 190, 60)
+        this.rpAssignZone = this.add.zone(rpCX + PW / 4, rpOpenY + row1Y, btnW, btnH)
             .setDepth(530).setScrollFactor(0).setInteractive();
         this.rpAssignZone.on('pointerup', () => {
             if (this.roomPanelOpen) this.assignDogToSelectedRoom();
         });
 
-        this.rpCloseZone = this.add.zone(rpCX + GW / 2 - 50, rpOpenY - 140, 60, 50)
+        this.rpCloseZone = this.add.zone(rpCX + PW / 2 - 25, rpOpenY - 150, 70, 55)
             .setDepth(530).setScrollFactor(0).setInteractive();
         this.rpCloseZone.on('pointerup', () => {
             if (this.roomPanelOpen) this.hideRoomPanel();
         });
 
-        this.rpCollectZone = this.add.zone(rpCX, rpOpenY + 120, 190, 50)
+        this.rpCollectZone = this.add.zone(rpCX - PW / 4, rpOpenY + row2Y, btnW, btnH)
             .setDepth(530).setScrollFactor(0).setInteractive();
         this.rpCollectZone.on('pointerup', () => {
             if (!this.roomPanelOpen || this.selectedRoom < 0) return;
             const room = this.rooms[this.selectedRoom];
             if (ROOM_DEFS[room.type].category === 'turret') {
-                // Cycle targeting mode
                 room.targetMode = ((room.targetMode || 0) + 1) % 4;
                 const modes = ['Closest', 'Strongest', 'Weakest', 'Flying'];
-                this.showNotification(`Targeting: ${modes[room.targetMode]}`, '#88CCFF');
+                this.showNotification(`Targeting: ${modes[room.targetMode]}`, CLR.orange);
                 this.updateRoomPanel();
             } else {
                 this.collectCoins(this.selectedRoom);
             }
         });
 
-        this.rpRepairZone = this.add.zone(rpCX, rpOpenY + 182, 400, 55)
+        this.rpRepairZone = this.add.zone(rpCX + PW / 4, rpOpenY + row2Y, btnW, btnH)
             .setDepth(530).setScrollFactor(0).setInteractive();
         this.rpRepairZone.on('pointerup', () => {
             if (this.roomPanelOpen) this.repairSelectedRoom();
         });
+
+        // Fullscreen zone behind room panel — tap outside to close
+        this.rpBgZone = this.add.zone(GW / 2, GH / 2, GW, GH)
+            .setDepth(519).setScrollFactor(0).setInteractive();
+        this.rpBgZone.on('pointerup', () => { if (this.roomPanelOpen) this.hideRoomPanel(); });
 
         // Start all room panel zones disabled
         this.rpUpgZone.disableInteractive();
@@ -529,6 +506,7 @@ class GameScene extends Phaser.Scene {
         this.rpCloseZone.disableInteractive();
         this.rpCollectZone.disableInteractive();
         this.rpRepairZone.disableInteractive();
+        this.rpBgZone.disableInteractive();
     }
 
     // --- INPUT ---
@@ -639,7 +617,7 @@ class GameScene extends Phaser.Scene {
             const def = ROOM_DEFS[card.key];
             const cost = Math.floor(def.baseCost * (1 + 0.12 * this.totalRoomsBuilt));
             card.costText.setText(`${cost}c`);
-            card.costText.setColor(this.coins >= cost ? '#FFD700' : '#FF4444');
+            card.costText.setColor(this.coins >= cost ? CLR.gold : CLR.danger);
         });
 
         if (this.buildMenuOpen) {
@@ -648,7 +626,7 @@ class GameScene extends Phaser.Scene {
                 targets: this.buildBarContainer, y: GH,
                 duration: 300, ease: 'Back.easeOut',
             });
-            this.moveBuildButton(GH - 450);
+            this.setBuildButtonAlpha(0);
             // Enable card & close zones
             this.buildCardZones.forEach(z => z.setInteractive());
             this.buildCloseZone.setInteractive();
@@ -657,7 +635,7 @@ class GameScene extends Phaser.Scene {
                 targets: this.buildBarContainer, y: GH + 400,
                 duration: 200, ease: 'Power2',
             });
-            this.moveBuildButton(GH - 60);
+            this.setBuildButtonAlpha(1);
             // Disable card & close zones
             this.buildCardZones.forEach(z => z.disableInteractive());
             this.buildCloseZone.disableInteractive();
@@ -694,7 +672,7 @@ class GameScene extends Phaser.Scene {
     // --- NOTIFICATIONS ---
     showNotification(text, color) {
         const notif = this.add.text(GW / 2, 250, text,
-            font('heading', { color: color || '#FFFFFF', align: 'center' })).setOrigin(0.5).setDepth(550).setScrollFactor(0);
+            font('heading', { color: color || CLR.white, align: 'center' })).setOrigin(0.5).setDepth(550).setScrollFactor(0);
 
         // Push existing notifications down
         this.notifications.forEach((n, i) => {
@@ -723,7 +701,7 @@ class GameScene extends Phaser.Scene {
     // --- HUD UPDATE ---
     updateHUD() {
         this.coinText.setText(Math.floor(this.coins).toLocaleString());
-        this.dogText.setText(`${this.dogs.length}/${this.getDogCapacity()}`);
+        this.dogText.setText(`Dogs: ${this.dogs.length}/${this.getDogCapacity()}`);
         this.bonesText.setText(`Bones: ${this.bones}`);
 
         // Pulse coin text on change
@@ -905,7 +883,7 @@ class GameScene extends Phaser.Scene {
         if (this.buildMenuOpen && this.buildCards) {
             this.buildCards.forEach(card => {
                 const cost = Math.floor(ROOM_DEFS[card.key].baseCost * (1 + 0.12 * this.totalRoomsBuilt));
-                card.costText.setColor(this.coins >= cost ? '#FFD700' : '#FF4444');
+                card.costText.setColor(this.coins >= cost ? CLR.gold : CLR.danger);
             });
         }
     }

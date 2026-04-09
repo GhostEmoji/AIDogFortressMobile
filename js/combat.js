@@ -9,12 +9,11 @@ GameScene.prototype.waveCountdownTick = function() {
     }
 
     this.waveCountdown--;
-    if (this.waveCountdown <= 10) {
-        this.waveTimerText.setText(`Next wave: ${this.waveCountdown}s`);
-        this.waveTimerText.setColor(this.waveCountdown <= 5 ? '#FF4444' : '#FFAA44');
+    this.waveTimerText.setText(`Next wave: ${this.waveCountdown}s`);
+    if (this.waveCountdown <= 5) {
+        this.waveTimerText.setColor(CLR.danger);
     } else {
-        this.waveTimerText.setText(`Next wave: ${this.waveCountdown}s`);
-        this.waveTimerText.setColor('#CCAA88');
+        this.waveTimerText.setColor(CLR.orange);
     }
 
     // Show wave preview
@@ -62,7 +61,7 @@ GameScene.prototype.startWave = function() {
     this.waveText.setText(`Wave ${this.wave}`);
 
     // Show wave warning
-    const warnText = this.add.text(GW / 2, GH / 2, `WAVE ${this.wave}`, font('giant', { color: '#FF4444' })).setOrigin(0.5).setDepth(600).setScrollFactor(0);
+    const warnText = this.add.text(GW / 2, GH / 2, `WAVE ${this.wave}`, font('giant', { color: CLR.danger })).setOrigin(0.5).setDepth(600).setScrollFactor(0);
 
     this.tweens.add({
         targets: warnText, scaleX: 1.5, scaleY: 1.5, alpha: 0,
@@ -500,7 +499,7 @@ GameScene.prototype.killEnemy = function(enemy) {
     this.updateHUD();
 
     // Floating reward text
-    const ft = this.add.text(enemy.x, enemy.y - 30, `+${enemy.reward}`, font('heading', { color: '#44FF88' })).setOrigin(0.5).setDepth(100);
+    const ft = this.add.text(enemy.x, enemy.y - 30, `+${enemy.reward}`, font('heading', { color: CLR.success })).setOrigin(0.5).setDepth(100);
     this.tweens.add({
         targets: ft, y: ft.y - 50, alpha: 0,
         duration: 700, onComplete: () => ft.destroy(),
@@ -539,7 +538,7 @@ GameScene.prototype.waveComplete = function() {
     this.showNotification(`Wave ${this.wave} complete! +${bonus}c +${bonesReward} Bones!`, '#44FF88');
 
     // Victory text
-    const vText = this.add.text(GW / 2, GH / 2, 'WAVE CLEARED!', font('big', { color: '#44FF88' })).setOrigin(0.5).setDepth(600).setScrollFactor(0);
+    const vText = this.add.text(GW / 2, GH / 2, 'WAVE CLEARED!', font('big', { color: CLR.success })).setOrigin(0.5).setDepth(600).setScrollFactor(0);
 
     this.tweens.add({
         targets: vText, scaleX: 1.3, scaleY: 1.3, alpha: 0,

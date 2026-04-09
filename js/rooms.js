@@ -100,7 +100,7 @@ GameScene.prototype.createConstructionPlaceholder = function(room, index) {
     container.add(bg);
 
     // "?" label
-    const label = this.add.text(- ROOM_W / 2 + 15, -ROOM_H / 2 + 8, 'Building...', font('body', { color: '#AAAAAA' }));
+    const label = this.add.text(- ROOM_W / 2 + 15, -ROOM_H / 2 + 8, 'Building...', font('body', { color: CLR.muted }));
     container.add(label);
 
     room.container = container;
@@ -250,7 +250,7 @@ GameScene.prototype.createRoomVisual = function(room, index) {
     lvlBg.fillRoundedRect(ROOM_W / 2 - 75, -ROOM_H / 2 + 5, 65, 32, 8);
     container.add(lvlBg);
 
-    const lvlText = this.add.text(ROOM_W / 2 - 42, -ROOM_H / 2 + 21, 'Lv.1', font('body', { color: '#FFD700' })).setOrigin(0.5);
+    const lvlText = this.add.text(ROOM_W / 2 - 42, -ROOM_H / 2 + 21, 'Lv.1', font('body', { color: CLR.gold })).setOrigin(0.5);
     container.add(lvlText);
     room.lvlText = lvlText;
 
@@ -259,7 +259,7 @@ GameScene.prototype.createRoomVisual = function(room, index) {
         const coinContainer = this.add.container(ROOM_W / 2 - 80, 20);
         const cIcon = this.add.image(0, 0, 'coin').setScale(1.2);
         coinContainer.add(cIcon);
-        const cText = this.add.text(20, 0, '0', font('body', { color: '#FFD700' })).setOrigin(0, 0.5);
+        const cText = this.add.text(20, 0, '0', font('body', { color: CLR.gold })).setOrigin(0, 0.5);
         coinContainer.add(cText);
         coinContainer.setAlpha(0);
         container.add(coinContainer);
@@ -542,7 +542,7 @@ GameScene.prototype.collectCoins = function(roomIndex) {
 
     // Floating text
     const ry = this.getRoomY(roomIndex);
-    const floatText = this.add.text(FORT_CX, ry + ROOM_H / 2, `+${amount}`, font('hud', { color: '#FFD700' })).setOrigin(0.5).setDepth(100);
+    const floatText = this.add.text(FORT_CX, ry + ROOM_H / 2, `+${amount}`, font('hud', { color: CLR.gold })).setOrigin(0.5).setDepth(100);
 
     this.tweens.add({
         targets: floatText, y: ry - 20, alpha: 0,
@@ -575,7 +575,7 @@ GameScene.prototype.collectAllCoins = function() {
 
         // Big floating text at center of screen
         const camY = this.cameras.main.scrollY + GH / 2;
-        const floatText = this.add.text(FORT_CX, camY, `+${total}`, font('big', { color: '#FFD700' })).setOrigin(0.5).setDepth(100);
+        const floatText = this.add.text(FORT_CX, camY, `+${total}`, font('big', { color: CLR.gold })).setOrigin(0.5).setDepth(100);
 
         this.tweens.add({
             targets: floatText, y: camY - 80, alpha: 0, scaleX: 1.5, scaleY: 1.5,
@@ -610,6 +610,7 @@ GameScene.prototype.showRoomPanel = function() {
     this.rpCloseZone.setInteractive();
     this.rpCollectZone.setInteractive();
     this.rpRepairZone.setInteractive();
+    this.rpBgZone.setInteractive();
 
     // Highlight selected room
     const room = this.rooms[this.selectedRoom];
@@ -631,7 +632,8 @@ GameScene.prototype.updateRoomPanel = function() {
     if (room.constructing) {
         this.rpName.setText(def.name);
         this.rpLevel.setText('Under Construction');
-        this.rpLevel.setColor('#FFAA44');
+        this.rpLevel.setColor(CLR.orange);
+        this.rpHp.setText('');
         this.rpStats.setText(`Time remaining: ${Math.ceil(room.constructionLeft)}s`);
         this.rpDogs.setText('');
         this.rpUpgText.setText('');
@@ -639,7 +641,7 @@ GameScene.prototype.updateRoomPanel = function() {
         this.rpCollectText.setText('');
         const speedCost = Math.ceil(room.constructionLeft / 5);
         this.rpRepairText.setText(`Speed Up: ${speedCost} Bones`);
-        this.rpRepairText.setColor(this.bones >= speedCost ? '#FFFFFF' : '#FF4444');
+        this.rpRepairText.setColor(this.bones >= speedCost ? CLR.white : CLR.danger);
         return;
     }
 
@@ -648,9 +650,11 @@ GameScene.prototype.updateRoomPanel = function() {
     const hpPct = Math.floor((room.hp / room.maxHp) * 100);
 
     this.rpName.setText(def.name);
-    this.rpLevel.setText(`Level ${room.level}  |  HP: ${room.hp}/${room.maxHp} (${hpPct}%)`);
-    const hpColor = hpPct > 75 ? '#CCCCCC' : hpPct > 50 ? '#FFAA44' : hpPct > 25 ? '#FF8844' : '#FF4444';
-    this.rpLevel.setColor(hpColor);
+    this.rpLevel.setText(`Level ${room.level}`);
+    this.rpLevel.setColor(CLR.white);
+    const hpColor = hpPct > 75 ? CLR.success : hpPct > 50 ? CLR.orange : CLR.danger;
+    this.rpHp.setText(`HP: ${hpPct}%`);
+    this.rpHp.setColor(hpColor);
 
     if (def.category === 'turret') {
         const dmg = Math.floor(def.baseDamage * room.level * this.getRoomDogBonus(room) * hpMult);
@@ -686,10 +690,10 @@ GameScene.prototype.updateRoomPanel = function() {
     const repairCost = Math.ceil((room.maxHp - room.hp) * costPerHp);
     if (room.hp >= room.maxHp) {
         this.rpRepairText.setText('Full Health');
-        this.rpRepairText.setColor('#88FF88');
+        this.rpRepairText.setColor(CLR.success);
     } else {
         this.rpRepairText.setText(`Repair: ${repairCost}c`);
-        this.rpRepairText.setColor(this.coins >= repairCost ? '#FFFFFF' : '#FF4444');
+        this.rpRepairText.setColor(this.coins >= repairCost ? CLR.white : CLR.danger);
     }
 };
 
@@ -710,6 +714,7 @@ GameScene.prototype.hideRoomPanel = function() {
     this.rpCloseZone.disableInteractive();
     this.rpCollectZone.disableInteractive();
     this.rpRepairZone.disableInteractive();
+    this.rpBgZone.disableInteractive();
 };
 
 // --- UPGRADES ---
@@ -814,7 +819,7 @@ GameScene.prototype.damageRoom = function(roomIndex, damage) {
     const ry = this.getRoomY(roomIndex);
     const ft = this.add.text(
         FORT_CX + Phaser.Math.Between(-80, 80), ry + ROOM_H / 2,
-        `-${actualDamage}`, font('body', { color: '#FF6644' })
+        `-${actualDamage}`, font('body', { color: CLR.danger })
     ).setOrigin(0.5).setDepth(100);
     this.tweens.add({
         targets: ft, y: ft.y - 25, alpha: 0,
