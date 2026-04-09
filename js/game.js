@@ -371,7 +371,7 @@ class GameScene extends Phaser.Scene {
         // Fullscreen zone behind build menu — tap outside to close
         this.buildCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
             .setDepth(509).setScrollFactor(0).setInteractive();
-        this.buildCloseZone.on('pointerup', () => { if (this.buildMenuOpen) this.toggleBuildMenu(); });
+        this.buildCloseZone.on('pointerup', () => { console.log('buildCloseZone pointerup, buildMenuOpen:', this.buildMenuOpen); if (this.buildMenuOpen) this.toggleBuildMenu(); });
         this.buildCloseZone.disableInteractive();
 
         // Build button (always visible)
@@ -383,8 +383,13 @@ class GameScene extends Phaser.Scene {
 
         this.buildBtnZone = this.add.zone(GW / 2, GH - 60, 260, 75)
             .setDepth(507).setScrollFactor(0).setInteractive();
-        this.buildBtnZone.on('pointerdown', () => this.buildBtnGfx.setAlpha(0.7));
+        console.log('BUILD zone created at', GW/2, GH-60, 'size', 260, 75, 'interactive:', this.buildBtnZone.input?.enabled);
+        this.buildBtnZone.on('pointerdown', () => {
+            console.log('BUILD pointerdown');
+            this.buildBtnGfx.setAlpha(0.7);
+        });
         this.buildBtnZone.on('pointerup', () => {
+            console.log('BUILD pointerup, calling toggleBuildMenu');
             this.buildBtnGfx.setAlpha(1);
             this.toggleBuildMenu();
         });
@@ -394,16 +399,7 @@ class GameScene extends Phaser.Scene {
     refreshBuildTabs() {
         const active = this.buildActiveTab;
 
-        // Redraw tab backgrounds
-        this.buildTabGfx.forEach(t => {
-            t.gfx.clear();
-            const isActive = t.id === active;
-            t.gfx.fillStyle(isActive ? t.color : 0x333333);
-            const tabY = this.buildTabs ? -this.buildBarContainer.list[0].y || 0 : 0;
-            t.gfx.fillRoundedRect(t.x, this.buildTabGfx[0].gfx.y || -this.buildBarClosedY + GH + 20, t.w, t.h, 10);
-        });
-
-        // Simpler approach: just redraw all tab bgs at fixed positions
+        // Redraw tab backgrounds at fixed positions
         const tabY = -(55 + 65 + 15 + 3 * (90 + 8)) + 20; // -PANEL_H + 20
         this.buildTabGfx.forEach(t => {
             t.gfx.clear();
@@ -419,7 +415,7 @@ class GameScene extends Phaser.Scene {
             card.nameTxt.setVisible(visible);
             card.descTxt.setVisible(visible);
             card.costText.setVisible(visible);
-            if (visible) {
+            if (visible && this.buildMenuOpen) {
                 card.zone.setInteractive();
             } else {
                 card.zone.disableInteractive();
@@ -571,9 +567,15 @@ class GameScene extends Phaser.Scene {
 
     // --- INPUT ---
     setupInput() {
+        // Debug: log which game objects receive input
+        this.input.on('gameobjectdown', (pointer, gameObject) => {
+            console.log('HIT object:', gameObject.type, 'depth:', gameObject.depth, 'x:', Math.round(gameObject.x), 'y:', Math.round(gameObject.y));
+        });
+
         this.input.on('pointerdown', (pointer) => {
             // Ignore if on UI elements with scrollFactor 0
             const screenY = pointer.y;
+            console.log('pointerdown screenY:', screenY, 'buildMenuOpen:', this.buildMenuOpen, 'roomPanelOpen:', this.roomPanelOpen);
             if (screenY < 120 || screenY > GH - 100) return;
             if (this.buildMenuOpen && screenY > GH - 250) return;
             if (this.roomPanelOpen && screenY > GH - 350) return;
@@ -670,6 +672,7 @@ class GameScene extends Phaser.Scene {
 
     // --- BUILD MENU ---
     toggleBuildMenu() {
+        console.log('toggleBuildMenu called, was:', this.buildMenuOpen);
         this.buildMenuOpen = !this.buildMenuOpen;
 
         // Update costs on cards

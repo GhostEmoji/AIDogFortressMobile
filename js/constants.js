@@ -102,13 +102,13 @@ const ROOM_DEFS = {
 
 // --- ENEMY DEFINITIONS ---
 const ENEMY_DEFS = {
-    scout:   { name: 'Scout Bot',   color: 0x88AACC, hp: 55,  speed: 80,  damage: 8,  reward: 10,  size: 44, flying: false },
-    assault: { name: 'Assault Bot', color: 0xCC6622, hp: 35,  speed: 130, damage: 12, reward: 15,  size: 36, flying: false },
-    tank:    { name: 'Tank Bot',    color: 0x667788, hp: 140, speed: 55,  damage: 20, reward: 40,  size: 50, flying: false },
-    mega:    { name: 'Mega Bot',    color: 0x994444, hp: 500, speed: 40,  damage: 40, reward: 120, size: 70, flying: false },
-    drone:   { name: 'Scout Drone', color: 0x6688BB, hp: 20,  speed: 100, damage: 5,  reward: 10,  size: 32, flying: true, flyHeight: 2 },
-    gunship: { name: 'Gunship',     color: 0x883333, hp: 60,  speed: 65,  damage: 15, reward: 35,  size: 46, flying: true, flyHeight: 3 },
-    jammer:  { name: 'Jammer Bot', color: 0x886688, hp: 45,  speed: 70,  damage: 6,  reward: 30,  size: 42, flying: false },
+    scout:   { name: 'Scout Bot',   color: 0x88AACC, hp: 55,  speed: 70,  damage: 6,  reward: 10,  size: 44, flying: false },
+    assault: { name: 'Assault Bot', color: 0xCC6622, hp: 35,  speed: 110, damage: 8,  reward: 15,  size: 36, flying: false },
+    tank:    { name: 'Tank Bot',    color: 0x667788, hp: 140, speed: 45,  damage: 14, reward: 40,  size: 50, flying: false },
+    mega:    { name: 'Mega Bot',    color: 0x994444, hp: 500, speed: 35,  damage: 25, reward: 120, size: 70, flying: false },
+    drone:   { name: 'Scout Drone', color: 0x6688BB, hp: 20,  speed: 85,  damage: 4,  reward: 10,  size: 32, flying: true, flyHeight: 2 },
+    gunship: { name: 'Gunship',     color: 0x883333, hp: 60,  speed: 55,  damage: 10, reward: 35,  size: 46, flying: true, flyHeight: 3 },
+    jammer:  { name: 'Jammer Bot', color: 0x886688, hp: 45,  speed: 60,  damage: 4,  reward: 30,  size: 42, flying: false },
 };
 
 // --- ROOM HP ---

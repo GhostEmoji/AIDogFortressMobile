@@ -25,23 +25,23 @@ GameScene.prototype.waveCountdownTick = function() {
 };
 
 GameScene.prototype.predictWave = function(waveNum) {
-    const numEnemies = Math.min(4 + waveNum * 2, 40);
+    // Same formula as startWave
+    const numEnemies = Math.min(Math.floor(3 + waveNum), 15);
     const counts = {};
 
     for (let i = 0; i < numEnemies; i++) {
         let type = 'scout';
-        // Use same logic as startWave but deterministic preview
-        if (waveNum >= 8 && waveNum % 5 === 0 && i === numEnemies - 1) {
+        // Boss mega (deterministic, same as startWave)
+        if (waveNum >= 10 && waveNum % 5 === 0 && i === numEnemies - 1) {
             type = 'mega';
-        } else if (waveNum >= 7 && i % 8 === 7) {
-            type = 'jammer';
         } else {
-            // Approximate distribution
-            const slot = i % 10;
-            if (waveNum >= 6 && slot === 9) type = 'gunship';
-            else if (waveNum >= 5 && slot >= 7) type = 'tank';
-            else if (waveNum >= 4 && slot >= 5) type = 'drone';
-            else if (waveNum >= 3 && slot >= 3) type = 'assault';
+            // Distribute using same probability thresholds as startWave
+            const t = i / numEnemies;
+            if (waveNum >= 12 && t < 0.08) type = 'jammer';
+            else if (waveNum >= 11 && t < 0.12) type = 'gunship';
+            else if (waveNum >= 9 && t < 0.18) type = 'tank';
+            else if (waveNum >= 7 && t < 0.28) type = 'drone';
+            else if (waveNum >= 5 && t < 0.38) type = 'assault';
         }
         counts[type] = (counts[type] || 0) + 1;
         if (type === 'drone') counts[type] += 2; // swarm spawns 3
@@ -69,28 +69,28 @@ GameScene.prototype.startWave = function() {
         onComplete: () => warnText.destroy(),
     });
 
-    // Determine enemies for this wave
-    const numEnemies = Math.min(Math.floor(3 + this.wave * 1.5), 25);
+    // Determine enemies for this wave (gentle ramp for kids)
+    const numEnemies = Math.min(Math.floor(3 + this.wave), 15);
     this.enemiesAlive = numEnemies;
 
-    const spawnDelay = Math.max(300, 1800 - this.wave * 60);
+    const spawnDelay = Math.max(500, 2200 - this.wave * 50);
 
     for (let i = 0; i < numEnemies; i++) {
         this.time.delayedCall(i * spawnDelay, () => {
             let type = 'scout';
             const roll = Math.random();
-            if (this.wave >= 7 && roll < 0.08) type = 'jammer';
-            else if (this.wave >= 6 && roll < 0.12) type = 'gunship';
-            else if (this.wave >= 5 && roll < 0.18) type = 'tank';
-            else if (this.wave >= 4 && roll < 0.28) type = 'drone';
-            else if (this.wave >= 3 && roll < 0.38) type = 'assault';
+            if (this.wave >= 12 && roll < 0.08) type = 'jammer';
+            else if (this.wave >= 11 && roll < 0.12) type = 'gunship';
+            else if (this.wave >= 9 && roll < 0.18) type = 'tank';
+            else if (this.wave >= 7 && roll < 0.28) type = 'drone';
+            else if (this.wave >= 5 && roll < 0.38) type = 'assault';
 
             // Boss mega bot on wave milestones
-            if (this.wave >= 8 && this.wave % 5 === 0 && i === numEnemies - 1) type = 'mega';
+            if (this.wave >= 10 && this.wave % 5 === 0 && i === numEnemies - 1) type = 'mega';
 
             const side = Math.random() < 0.5 ? 'left' : 'right';
             if (type === 'drone') {
-                // Swarm: spawn 3 drones at once
+                this.enemiesAlive += 2; // swarm spawns 3, but only 1 slot counted
                 for (let d = 0; d < 3; d++) {
                     this.time.delayedCall(d * 150, () => this.spawnEnemy('drone', side));
                 }
@@ -103,8 +103,8 @@ GameScene.prototype.startWave = function() {
 
 GameScene.prototype.spawnEnemy = function(type, side) {
     const def = ENEMY_DEFS[type];
-    const hpScale = 1 + (this.wave - 1) * 0.15;
-    const speedScale = 1 + (this.wave - 1) * 0.04;
+    const hpScale = 1 + (this.wave - 1) * 0.08;
+    const speedScale = 1 + (this.wave - 1) * 0.02;
 
     const texKey = 'enemy_' + type;
     const x = side === 'left' ? -def.size : GW + def.size;
@@ -297,7 +297,7 @@ GameScene.prototype.updateEnemies = function(delta) {
                                 this.cameras.main.shake(200, 0.01);
                                 this.rooms.forEach((r, ri) => {
                                     if (ri !== targetIdx && !r.constructing) {
-                                        this.damageRoom(ri, Math.floor(e.damage * 0.25));
+                                        this.damageRoom(ri, Math.floor(e.damage * 0.15));
                                     }
                                 });
                             }
@@ -494,6 +494,9 @@ GameScene.prototype.damageEnemy = function(enemy, damage) {
 };
 
 GameScene.prototype.killEnemy = function(enemy) {
+    if (enemy.dead) return;
+    enemy.dead = true;
+
     // Reward
     this.coins += enemy.reward;
     this.updateHUD();
@@ -519,15 +522,15 @@ GameScene.prototype.killEnemy = function(enemy) {
 
     this.enemiesAlive--;
 
-    // Check if wave complete
-    if (this.enemiesAlive <= 0 && this.waveActive) {
+    // Check if wave complete — ensure all enemies truly gone
+    if (this.enemiesAlive <= 0 && this.enemies.length === 0 && this.waveActive) {
         this.waveComplete();
     }
 };
 
 GameScene.prototype.waveComplete = function() {
     this.waveActive = false;
-    this.waveCountdown = Math.max(15, 30 - this.wave);
+    this.waveCountdown = Math.max(20, 40 - this.wave);
 
     const bonus = this.wave * 12;
     const bonesReward = Math.max(1, Math.floor(this.wave / 2));
