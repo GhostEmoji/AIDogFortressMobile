@@ -527,6 +527,16 @@ GameScene.prototype.economyTick = function() {
         }
         this.updateRoomHpBar(room);
     });
+
+    // Dog work time accumulation (1 second per tick for assigned dogs)
+    this.dogs.forEach(dog => {
+        if (dog.assignedRoom >= 0) {
+            dog.workTime = (dog.workTime || 0) + 1;
+            if (dog.workTime >= MEMENTO_WORK_SECONDS && !this.mementosEarned.includes(dog.breedIndex)) {
+                this.earnMemento(dog);
+            }
+        }
+    });
 };
 
 GameScene.prototype.collectCoins = function(roomIndex) {

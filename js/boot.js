@@ -41,9 +41,10 @@ class BootScene extends Phaser.Scene {
         g.fillStyle(0xFFFF00); g.fillCircle(6, 6, 6);
         g.generateTexture('star', 12, 12); g.destroy();
 
-        // Dog textures for each breed
+        // Dog textures for each breed + silhouettes for undiscovered
         DOG_BREEDS.forEach((breed, i) => {
             this.generateDog('dog_' + i, breed.color);
+            this.generateDog('dog_sil_' + i, 0x333333);
         });
 
         // Robot enemy textures

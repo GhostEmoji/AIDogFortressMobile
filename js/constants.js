@@ -120,18 +120,71 @@ const FLYING_ATTACK_INTERVAL = 2000;
 // --- DOG DATA ---
 // Skill categories: combat, production, repair, communication
 // Each breed has a primary skill affinity (higher random range for that skill)
+// Common breeds (0-9) appear normally. Rare breeds (10-14) need specific conditions.
 const DOG_BREEDS = [
-    { name: 'Labrador', color: 0xD4A843, affinity: 'production' },
-    { name: 'German Shepherd', color: 0xA67B4B, affinity: 'combat' },
-    { name: 'Corgi', color: 0xE8A040, affinity: 'repair' },
-    { name: 'Husky', color: 0xB0B8C8, affinity: 'combat' },
-    { name: 'Poodle', color: 0xE8DDD0, affinity: 'production' },
-    { name: 'Dalmatian', color: 0xF0F0F0, affinity: 'combat' },
-    { name: 'Bulldog', color: 0xC8A878, affinity: 'repair' },
-    { name: 'Shiba Inu', color: 0xD4884A, affinity: 'communication' },
-    { name: 'Beagle', color: 0xC89050, affinity: 'production' },
-    { name: 'Border Collie', color: 0x3A3A3A, affinity: 'communication' },
+    // --- Common breeds ---
+    { name: 'Labrador', color: 0xD4A843, affinity: 'production', rarity: 'common',
+      personality: 'Always happy, always hungry. Will work double shifts for treats.',
+      memento: { name: 'Chewed Tennis Ball', desc: 'A soggy but beloved trophy.' } },
+    { name: 'German Shepherd', color: 0xA67B4B, affinity: 'combat', rarity: 'common',
+      personality: 'Born leader. Takes guard duty very seriously.',
+      memento: { name: 'Tactical Bandana', desc: 'Worn on every patrol. Smells like courage.' } },
+    { name: 'Corgi', color: 0xE8A040, affinity: 'repair', rarity: 'common',
+      personality: 'Short legs, big heart. Surprisingly good with a wrench.',
+      memento: { name: 'Tiny Crown', desc: 'Every corgi is royalty. This one proves it.' } },
+    { name: 'Husky', color: 0xB0B8C8, affinity: 'combat', rarity: 'common',
+      personality: 'Dramatic howler. Will argue about everything but fight harder.',
+      memento: { name: 'Howling Mixtape', desc: 'A collection of their greatest howls.' } },
+    { name: 'Poodle', color: 0xE8DDD0, affinity: 'production', rarity: 'common',
+      personality: 'Secretly a genius. Pretends the fancy haircut is just for fun.',
+      memento: { name: 'Fancy Ribbon', desc: 'Perfectly tied. They insisted.' } },
+    { name: 'Dalmatian', color: 0xF0F0F0, affinity: 'combat', rarity: 'common',
+      personality: 'Boundless energy. Has never walked when sprinting was an option.',
+      memento: { name: 'Spotted Bandage', desc: 'Hard to tell which spots are real.' } },
+    { name: 'Bulldog', color: 0xC8A878, affinity: 'repair', rarity: 'common',
+      personality: 'Stubborn but dependable. If it is broken, they will fix it. Eventually.',
+      memento: { name: 'Wrench Bone', desc: 'Part tool, part chew toy. Fully functional.' } },
+    { name: 'Shiba Inu', color: 0xD4884A, affinity: 'communication', rarity: 'common',
+      personality: 'Much talent. Very communicate. Wow.',
+      memento: { name: 'Lucky Coin', desc: 'Found buried in the yard. Might be magical.' } },
+    { name: 'Beagle', color: 0xC89050, affinity: 'production', rarity: 'common',
+      personality: 'Follows their nose everywhere. Usually to the kitchen.',
+      memento: { name: 'Sniff Map', desc: 'A hand-drawn map of every smell in the fortress.' } },
+    { name: 'Border Collie', color: 0x3A3A3A, affinity: 'communication', rarity: 'common',
+      personality: 'Smartest dog in the fortress. Organises the other dogs for fun.',
+      memento: { name: 'Herding Whistle', desc: 'They trained YOU to respond to it.' } },
+    // --- Rare breeds ---
+    { name: 'Great Dane', color: 0x7A6B5A, affinity: 'combat', rarity: 'rare',
+      personality: 'Gentle giant who accidentally knocks things over. Apologises with sad eyes.',
+      memento: { name: 'Giant Paw Print', desc: 'Pressed in clay. Takes up the whole shelf.' },
+      condition: { type: 'roomCount', roomType: 'cannon', min: 2 } },
+    { name: 'Golden Retriever', color: 0xDAB04A, affinity: 'production', rarity: 'rare',
+      personality: 'Will fetch anything, especially snacks from the kitchen.',
+      memento: { name: 'Golden Spatula', desc: 'Their prized kitchen tool. Slightly chewed.' },
+      condition: { type: 'roomCount', roomType: 'kitchen', min: 3 } },
+    { name: 'Akita', color: 0xC0A080, affinity: 'combat', rarity: 'rare',
+      personality: 'Silent guardian. Appears only when the fortress proves worthy.',
+      memento: { name: 'Battle Fang', desc: 'A trophy from a robot they defeated alone.' },
+      condition: { type: 'waveMin', wave: 10 } },
+    { name: 'Whippet', color: 0xC8B8A8, affinity: 'communication', rarity: 'rare',
+      personality: 'The fastest messenger. Loves high places with a view.',
+      memento: { name: 'Wind Feather', desc: 'Found mid-sprint. Nobody knows how.' },
+      condition: { type: 'roomCount', roomType: 'sniper', min: 1 } },
+    { name: 'Saint Bernard', color: 0xA85830, affinity: 'repair', rarity: 'rare',
+      personality: 'Arrives to help when the fortress grows large enough to need rescuing.',
+      memento: { name: 'Rescue Barrel', desc: 'Tiny barrel on their collar. Full of treats.' },
+      condition: { type: 'totalRooms', min: 12 } },
 ];
+
+// Memento work time threshold (seconds of assigned work)
+const MEMENTO_WORK_SECONDS = 600;
+
+// Human-readable condition labels for Dogbook UI
+const BREED_CONDITION_LABELS = {
+    roomCount: (c) => `Needs ${c.min}+ ${ROOM_DEFS[c.roomType].name} rooms`,
+    waveMin: (c) => `Appears after wave ${c.wave}`,
+    totalRooms: (c) => `Needs ${c.min}+ total rooms`,
+};
 
 // Maps room types to their skill category
 const ROOM_SKILL_MAP = {

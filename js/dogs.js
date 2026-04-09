@@ -3,9 +3,9 @@
 // Mixin: adds dog methods to GameScene
 // ============================================================
 
-GameScene.prototype.addDog = function() {
-    const breed = DOG_BREEDS[Phaser.Math.Between(0, DOG_BREEDS.length - 1)];
-    const breedIndex = DOG_BREEDS.indexOf(breed);
+GameScene.prototype.addDog = function(forceBreedIndex) {
+    const breedIndex = (forceBreedIndex !== undefined) ? forceBreedIndex : Phaser.Math.Between(0, 9);
+    const breed = DOG_BREEDS[breedIndex];
     const name = DOG_NAMES[Phaser.Math.Between(0, DOG_NAMES.length - 1)];
 
     // Generate skills (1-5). Affinity skill gets +2 bonus (capped at 5)
@@ -27,10 +27,19 @@ GameScene.prototype.addDog = function() {
         name, breed: breed.name, breedIndex,
         skills, dreamSkill: bestSkill,
         assignedRoom: -1,
+        workTime: 0,
         sprite: null,
     };
 
     this.dogs.push(dog);
+
+    // Track breed discovery
+    if (!this.breedsDiscovered.includes(breedIndex)) {
+        this.breedsDiscovered.push(breedIndex);
+        this.showBreedDiscovery(breed, breedIndex);
+    }
+    this.breedTimesSeen[breedIndex] = (this.breedTimesSeen[breedIndex] || 0) + 1;
+
     this.updateHUD();
     return dog;
 };
@@ -77,8 +86,11 @@ GameScene.prototype.tryRecruitDog = function() {
     const chance = 0.15 + totalLevel * 0.05;
 
     if (Math.random() < chance) {
-        const dog = this.addDog();
-        this.showNotification(`${dog.name} the ${dog.breed} joined!`, '#44FF88');
+        const breedIdx = this.selectRecruitBreed();
+        const dog = this.addDog(breedIdx);
+        const isRare = DOG_BREEDS[breedIdx].rarity === 'rare';
+        this.showNotification(`${dog.name} the ${dog.breed} joined!${isRare ? ' RARE!' : ''}`,
+            isRare ? CLR.gold : CLR.success);
 
         // Celebration particles at radio rooms
         radioRooms.forEach(r => {
@@ -92,6 +104,106 @@ GameScene.prototype.tryRecruitDog = function() {
 
 GameScene.prototype.assignDogToSelectedRoom = function() {
     this.showDogPicker();
+};
+
+// --- BREED RECRUITMENT & DISCOVERY ---
+GameScene.prototype.selectRecruitBreed = function() {
+    // 20% chance to attempt a rare breed
+    if (Math.random() < 0.2) {
+        const rareBreeds = DOG_BREEDS
+            .map((b, i) => ({ breed: b, index: i }))
+            .filter(b => b.breed.rarity === 'rare');
+        Phaser.Utils.Array.Shuffle(rareBreeds);
+        for (const rb of rareBreeds) {
+            if (this.checkBreedCondition(rb.breed.condition)) {
+                return rb.index;
+            }
+        }
+    }
+    // Fall back to random common breed
+    return Phaser.Math.Between(0, 9);
+};
+
+GameScene.prototype.checkBreedCondition = function(condition) {
+    if (!condition) return true;
+    switch (condition.type) {
+        case 'roomCount':
+            return this.rooms.filter(r => r.type === condition.roomType && !r.constructing).length >= condition.min;
+        case 'waveMin':
+            return this.wave >= condition.wave;
+        case 'totalRooms':
+            return this.rooms.filter(r => !r.constructing).length >= condition.min;
+        default:
+            return false;
+    }
+};
+
+GameScene.prototype.showBreedDiscovery = function(breed, breedIndex) {
+    if (this.breedDiscoveryPopup) this.closeBreedDiscovery();
+
+    const popup = this.add.container(GW / 2, GH / 2).setDepth(700).setScrollFactor(0);
+    this.breedDiscoveryPopup = popup;
+
+    const dim = this.add.graphics();
+    dim.fillStyle(0x000000, 0.6);
+    dim.fillRect(-GW / 2, -GH / 2, GW, GH);
+    popup.add(dim);
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x2A1500, 0.95);
+    panel.fillRoundedRect(-250, -220, 500, 440, 20);
+    panel.lineStyle(3, 0xDAA520);
+    panel.strokeRoundedRect(-250, -220, 500, 440, 20);
+    popup.add(panel);
+
+    popup.add(this.add.text(0, -190, 'New Breed Discovered!', FONTS.title).setOrigin(0.5));
+
+    const sprite = this.add.image(0, -80, 'dog_' + breedIndex).setScale(3);
+    popup.add(sprite);
+
+    popup.add(this.add.text(0, -10, breed.name,
+        font('button', { color: CLR.gold })).setOrigin(0.5));
+
+    if (breed.rarity === 'rare') {
+        popup.add(this.add.text(0, 30, 'RARE BREED!',
+            font('heading', { color: CLR.gold })).setOrigin(0.5));
+    }
+
+    // Word-wrapped personality text
+    const persText = this.add.text(0, breed.rarity === 'rare' ? 75 : 55, breed.personality,
+        font('body', { color: CLR.white, wordWrap: { width: 420 } })).setOrigin(0.5, 0);
+    popup.add(persText);
+
+    makeCloseButton(this, popup, 215, -195);
+
+    // Particles
+    const particleCount = breed.rarity === 'rare' ? 25 : 12;
+    this.spawnParticles(GW / 2, GH / 2 - 80, 0xFFD700, particleCount);
+
+    this.breedDiscoveryCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
+        .setDepth(699).setScrollFactor(0).setInteractive();
+    this.breedDiscoveryCloseZone.on('pointerup', () => this.closeBreedDiscovery());
+
+    popup.setScale(0.8).setAlpha(0);
+    this.tweens.add({
+        targets: popup, scaleX: 1, scaleY: 1, alpha: 1,
+        duration: 200, ease: 'Back.easeOut',
+    });
+};
+
+GameScene.prototype.closeBreedDiscovery = function() {
+    if (this.breedDiscoveryPopup) { this.breedDiscoveryPopup.destroy(); this.breedDiscoveryPopup = null; }
+    if (this.breedDiscoveryCloseZone) { this.breedDiscoveryCloseZone.destroy(); this.breedDiscoveryCloseZone = null; }
+};
+
+GameScene.prototype.earnMemento = function(dog) {
+    const breed = DOG_BREEDS[dog.breedIndex];
+    if (!breed || !breed.memento) return;
+    this.mementosEarned.push(dog.breedIndex);
+    this.showNotification(`${dog.name} gave you a memento: ${breed.memento.name}!`, CLR.gold);
+    if (dog.sprite && dog.sprite.active) {
+        this.spawnParticles(dog.sprite.x, dog.sprite.y, 0xFFD700, 15);
+    }
 };
 
 // --- DOG INFO POPUP ---
@@ -510,6 +622,399 @@ GameScene.prototype.updateLobbyDogs = function() {
         ).setOrigin(1, 0.5).setDepth(11);
         this.lobbyDogSprites.push(moreText);
     }
+};
+
+// --- DOGBOOK (tabbed: My Dogs / Collection) ---
+GameScene.prototype.showDogbook = function(initialTab) {
+    if (this.dogbookPopup) this.closeDogbook();
+
+    const tab = initialTab || 'roster';
+    this.dogbookTab = tab;
+
+    const popup = this.add.container(GW / 2, GH / 2).setDepth(700).setScrollFactor(0);
+    this.dogbookPopup = popup;
+    this.dogbookZones = [];
+
+    // Dim background
+    const dim = this.add.graphics();
+    dim.fillStyle(0x000000, 0.6);
+    dim.fillRect(-GW / 2, -GH / 2, GW, GH);
+    popup.add(dim);
+
+    // Panel
+    const panelW = GW - 60;
+    const panelH = GH - 200;
+    const panelTop = -panelH / 2;
+    this.dogbookPanelW = panelW;
+    this.dogbookPanelTop = panelTop;
+
+    const panel = this.add.graphics();
+    panel.fillStyle(0x1A0A00, 0.95);
+    panel.fillRoundedRect(-panelW / 2, panelTop, panelW, panelH, 16);
+    panel.lineStyle(3, 0xDAA520);
+    panel.strokeRoundedRect(-panelW / 2, panelTop, panelW, panelH, 16);
+    popup.add(panel);
+
+    // Title + close
+    popup.add(this.add.text(0, panelTop + 25, 'Dogbook', FONTS.title).setOrigin(0.5));
+    makeCloseButton(this, popup, panelW / 2 - 55, panelTop + 25);
+
+    // Tab buttons
+    const tabY = panelTop + 70;
+    const tabW = 220, tabH = 55, tabGap = 16;
+    this.dogbookTabGfx = {};
+
+    const tabs = [
+        { id: 'roster', label: 'My Dogs', x: -(tabW + tabGap) / 2 },
+        { id: 'collection', label: 'Collection', x: (tabW + tabGap) / 2 },
+    ];
+
+    tabs.forEach(t => {
+        const isActive = t.id === tab;
+        const g = this.add.graphics();
+        g.fillStyle(isActive ? 0xDAA520 : 0x333333);
+        g.fillRoundedRect(t.x - tabW / 2, tabY, tabW, tabH, 10);
+        popup.add(g);
+        this.dogbookTabGfx[t.id] = g;
+
+        popup.add(this.add.text(t.x, tabY + tabH / 2, t.label, FONTS.body).setOrigin(0.5));
+
+        const zone = this.add.zone(GW / 2 + t.x, GH / 2 + tabY + tabH / 2, tabW, tabH)
+            .setDepth(701).setScrollFactor(0).setInteractive();
+        zone.on('pointerup', () => {
+            if (this.dogbookTab !== t.id) {
+                this.dogbookTab = t.id;
+                this.renderDogbookContent();
+            }
+        });
+        this.dogbookZones.push(zone);
+    });
+
+    // Content area starts below tabs
+    this.dogbookContentTop = tabY + tabH + 15;
+
+    // Close zone
+    this.dogbookCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
+        .setDepth(699).setScrollFactor(0).setInteractive();
+    this.dogbookCloseZone.on('pointerup', () => this.closeDogbook());
+
+    // Render initial tab content
+    this.renderDogbookContent();
+
+    popup.setScale(0.8).setAlpha(0);
+    this.tweens.add({
+        targets: popup, scaleX: 1, scaleY: 1, alpha: 1,
+        duration: 200, ease: 'Back.easeOut',
+    });
+};
+
+GameScene.prototype.renderDogbookContent = function() {
+    // Destroy old content
+    if (this.dogbookContent) { this.dogbookContent.destroy(); }
+    if (this.dogbookContentZones) {
+        this.dogbookContentZones.forEach(z => z.destroy());
+    }
+    this.dogbookContentZones = [];
+
+    // Update tab colors
+    Object.keys(this.dogbookTabGfx).forEach(id => {
+        const g = this.dogbookTabGfx[id];
+        const tabW = 220, tabH = 55, tabGap = 16;
+        const tx = id === 'roster' ? -(tabW + tabGap) / 2 : (tabW + tabGap) / 2;
+        g.clear();
+        g.fillStyle(id === this.dogbookTab ? 0xDAA520 : 0x333333);
+        g.fillRoundedRect(tx - tabW / 2, this.dogbookPanelTop + 70, tabW, tabH, 10);
+    });
+
+    const content = this.add.container(0, 0);
+    this.dogbookPopup.add(content);
+    this.dogbookContent = content;
+
+    if (this.dogbookTab === 'roster') {
+        this.renderMyDogsTab(content);
+    } else {
+        this.renderCollectionTab(content);
+    }
+};
+
+GameScene.prototype.renderMyDogsTab = function(content) {
+    const SKILL_COLORS = { combat: '#FF5555', production: '#55CC55', repair: '#55AAFF', communication: '#CC88FF' };
+    const panelW = this.dogbookPanelW;
+    const contentTop = this.dogbookContentTop;
+    const colX = { com: 100, pro: 220, rep: 340, cmm: 460 };
+
+    // Column headers
+    const headerY = contentTop;
+    const skillDefs = [
+        { x: colX.com, label: 'Combat', color: SKILL_COLORS.combat },
+        { x: colX.pro, label: 'Produce', color: SKILL_COLORS.production },
+        { x: colX.rep, label: 'Repair', color: SKILL_COLORS.repair },
+        { x: colX.cmm, label: 'Comms', color: SKILL_COLORS.communication },
+    ];
+    skillDefs.forEach(h => {
+        content.add(this.add.text(h.x, headerY, h.label, font('body', { color: CLR.muted })).setOrigin(0.5));
+    });
+
+    if (this.dogs.length === 0) {
+        content.add(this.add.text(0, headerY + 80, 'No dogs yet!', font('heading', { color: CLR.muted })).setOrigin(0.5));
+        return;
+    }
+
+    const sortedDogs = [...this.dogs].sort((a, b) => {
+        if (a.assignedRoom >= 0 && b.assignedRoom < 0) return -1;
+        if (a.assignedRoom < 0 && b.assignedRoom >= 0) return 1;
+        return a.assignedRoom - b.assignedRoom;
+    });
+
+    const ROW_H = 95;
+    const maxVisible = Math.min(sortedDogs.length, 10);
+    const listTop = headerY + 30;
+
+    for (let i = 0; i < maxVisible; i++) {
+        const dog = sortedDogs[i];
+        const y = listTop + i * ROW_H + ROW_H / 2;
+        const s = dog.skills || {};
+        const assigned = dog.assignedRoom >= 0 && dog.assignedRoom < this.rooms.length;
+        const roomDef = assigned ? ROOM_DEFS[this.rooms[dog.assignedRoom]?.type] : null;
+        const roomName = roomDef ? roomDef.name : 'Lobby';
+
+        const row = this.add.graphics();
+        row.fillStyle(assigned ? 0x2A1A0A : 0x1A1A1A);
+        row.fillRoundedRect(-panelW / 2 + 15, y - ROW_H / 2 + 4, panelW - 30, ROW_H - 8, 10);
+        content.add(row);
+
+        content.add(this.add.image(-panelW / 2 + 55, y, 'dog_' + dog.breedIndex).setScale(1.3));
+        content.add(this.add.text(-panelW / 2 + 90, y - 22, dog.name, FONTS.heading));
+
+        const statusColor = assigned ? CLR.brown : CLR.muted;
+        content.add(this.add.text(-panelW / 2 + 90, y + 12,
+            `${dog.breed} \u00b7 ${roomName}`, font('body', { color: statusColor })));
+
+        // Work time
+        const mins = Math.floor((dog.workTime || 0) / 60);
+        if (mins > 0) {
+            content.add(this.add.text(panelW / 2 - 30, y + 12, `${mins}m`,
+                font('body', { color: CLR.muted })).setOrigin(1, 0.5));
+        }
+
+        const skillKeys = ['combat', 'production', 'repair', 'communication'];
+        const skillXArr = [colX.com, colX.pro, colX.rep, colX.cmm];
+        skillKeys.forEach((sk, j) => {
+            const val = s[sk] || 1;
+            content.add(this.add.text(skillXArr[j], y, `${val}`,
+                font('heading', { color: SKILL_COLORS[sk], strokeThickness: 3 })).setOrigin(0.5));
+        });
+
+        const dreamIdx = skillKeys.indexOf(dog.dreamSkill);
+        if (dreamIdx >= 0) {
+            content.add(this.add.text(skillXArr[dreamIdx], y - 28, '\u2605',
+                font('body', { color: CLR.gold })).setOrigin(0.5));
+        }
+
+        const zone = this.add.zone(GW / 2, GH / 2 + y, panelW - 30, ROW_H - 8)
+            .setDepth(701).setScrollFactor(0).setInteractive();
+        zone.on('pointerdown', () => row.setAlpha(0.6));
+        zone.on('pointerup', () => {
+            row.setAlpha(1);
+            this.closeDogbook();
+            this.showDogInfo(dog);
+        });
+        zone.on('pointerout', () => row.setAlpha(1));
+        this.dogbookContentZones.push(zone);
+    }
+
+    if (sortedDogs.length > maxVisible) {
+        content.add(this.add.text(0, listTop + maxVisible * ROW_H + 10,
+            `+${sortedDogs.length - maxVisible} more`,
+            font('body', { color: CLR.muted })).setOrigin(0.5));
+    }
+};
+
+GameScene.prototype.renderCollectionTab = function(content) {
+    const panelW = this.dogbookPanelW;
+    const contentTop = this.dogbookContentTop;
+    const cols = 3;
+    const cellW = Math.floor((panelW - 40) / cols);
+    const cellH = 180;
+    const gridLeft = -panelW / 2 + 20;
+
+    for (let i = 0; i < DOG_BREEDS.length; i++) {
+        const breed = DOG_BREEDS[i];
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const cx = gridLeft + col * cellW + cellW / 2;
+        const cy = contentTop + row * cellH + cellH / 2;
+        const discovered = this.breedsDiscovered.includes(i);
+        const hasMemento = this.mementosEarned.includes(i);
+
+        // Cell background
+        const cellBg = this.add.graphics();
+        cellBg.fillStyle(discovered ? 0x2A1A0A : 0x1A1A1A);
+        cellBg.fillRoundedRect(cx - cellW / 2 + 5, cy - cellH / 2 + 5, cellW - 10, cellH - 10, 12);
+        if (breed.rarity === 'rare') {
+            cellBg.lineStyle(2, discovered ? 0xDAA520 : 0x555555);
+            cellBg.strokeRoundedRect(cx - cellW / 2 + 5, cy - cellH / 2 + 5, cellW - 10, cellH - 10, 12);
+        }
+        content.add(cellBg);
+
+        // Sprite or silhouette
+        const texKey = discovered ? 'dog_' + i : 'dog_sil_' + i;
+        content.add(this.add.image(cx, cy - 30, texKey).setScale(2));
+
+        if (discovered) {
+            content.add(this.add.text(cx, cy + 20, breed.name, FONTS.body).setOrigin(0.5));
+            const rarityColor = breed.rarity === 'rare' ? CLR.gold : CLR.muted;
+            content.add(this.add.text(cx, cy + 50, breed.rarity === 'rare' ? 'Rare' : 'Common',
+                font('body', { color: rarityColor })).setOrigin(0.5));
+
+            if (hasMemento) {
+                content.add(this.add.text(cx + cellW / 2 - 20, cy - cellH / 2 + 20, '\u2605',
+                    font('heading', { color: CLR.gold })).setOrigin(0.5));
+            }
+        } else {
+            content.add(this.add.text(cx, cy + 20, '???', font('heading', { color: CLR.muted })).setOrigin(0.5));
+            if (breed.rarity === 'rare') {
+                content.add(this.add.text(cx, cy + 50, 'Rare',
+                    font('body', { color: CLR.muted })).setOrigin(0.5));
+            }
+        }
+
+        // Tap zone
+        const zone = this.add.zone(GW / 2 + cx, GH / 2 + cy, cellW - 10, cellH - 10)
+            .setDepth(701).setScrollFactor(0).setInteractive();
+        zone.on('pointerdown', () => cellBg.setAlpha(0.6));
+        zone.on('pointerup', () => {
+            cellBg.setAlpha(1);
+            if (discovered) {
+                this.showBreedDetail(i);
+            }
+        });
+        zone.on('pointerout', () => cellBg.setAlpha(1));
+        this.dogbookContentZones.push(zone);
+    }
+
+    // Progress counters
+    const progressY = contentTop + Math.ceil(DOG_BREEDS.length / cols) * cellH + 10;
+    const disc = this.breedsDiscovered.length;
+    const mems = this.mementosEarned.length;
+    content.add(this.add.text(0, progressY,
+        `Discovered: ${disc} / ${DOG_BREEDS.length}    Mementos: ${mems} / ${DOG_BREEDS.length}`,
+        font('body', { color: CLR.gold })).setOrigin(0.5));
+};
+
+GameScene.prototype.closeDogbook = function() {
+    if (this.dogbookPopup) { this.dogbookPopup.destroy(); this.dogbookPopup = null; }
+    if (this.dogbookCloseZone) { this.dogbookCloseZone.destroy(); this.dogbookCloseZone = null; }
+    if (this.dogbookZones) { this.dogbookZones.forEach(z => z.destroy()); this.dogbookZones = null; }
+    if (this.dogbookContentZones) { this.dogbookContentZones.forEach(z => z.destroy()); this.dogbookContentZones = null; }
+    this.dogbookContent = null;
+    this.dogbookTabGfx = null;
+};
+
+// --- BREED DETAIL VIEW ---
+GameScene.prototype.showBreedDetail = function(breedIndex) {
+    if (this.breedDetailPopup) this.closeBreedDetail();
+
+    const breed = DOG_BREEDS[breedIndex];
+    const discovered = this.breedsDiscovered.includes(breedIndex);
+    const hasMemento = this.mementosEarned.includes(breedIndex);
+    const timesSeen = this.breedTimesSeen[breedIndex] || 0;
+
+    const popup = this.add.container(GW / 2, GH / 2).setDepth(750).setScrollFactor(0);
+    this.breedDetailPopup = popup;
+
+    const dim = this.add.graphics();
+    dim.fillStyle(0x000000, 0.4);
+    dim.fillRect(-GW / 2, -GH / 2, GW, GH);
+    popup.add(dim);
+
+    const pw = 560, ph = 620;
+    const panel = this.add.graphics();
+    panel.fillStyle(0x2A1500, 0.95);
+    panel.fillRoundedRect(-pw / 2, -ph / 2, pw, ph, 20);
+    panel.lineStyle(3, 0xDAA520);
+    panel.strokeRoundedRect(-pw / 2, -ph / 2, pw, ph, 20);
+    popup.add(panel);
+
+    // Dog sprite
+    popup.add(this.add.image(0, -ph / 2 + 100, 'dog_' + breedIndex).setScale(3));
+
+    // Name
+    popup.add(this.add.text(0, -ph / 2 + 170, breed.name,
+        font('button', { color: CLR.gold })).setOrigin(0.5));
+
+    // Rarity
+    const rarityColor = breed.rarity === 'rare' ? CLR.gold : CLR.muted;
+    popup.add(this.add.text(0, -ph / 2 + 210, breed.rarity === 'rare' ? 'Rare Breed' : 'Common Breed',
+        font('body', { color: rarityColor })).setOrigin(0.5));
+
+    // Personality
+    popup.add(this.add.text(0, -ph / 2 + 255, breed.personality,
+        font('body', { color: CLR.white, wordWrap: { width: 480 } })).setOrigin(0.5, 0));
+
+    // Affinity
+    const affinityLabels = { combat: 'Combat', production: 'Production', repair: 'Repair', communication: 'Communication' };
+    popup.add(this.add.text(0, -ph / 2 + 340, `Affinity: ${affinityLabels[breed.affinity]}`,
+        font('body', { color: CLR.orange })).setOrigin(0.5));
+
+    // Times recruited
+    popup.add(this.add.text(0, -ph / 2 + 380, `Recruited ${timesSeen} time${timesSeen !== 1 ? 's' : ''}`,
+        FONTS.body).setOrigin(0.5));
+
+    // Memento section
+    const mementoY = -ph / 2 + 430;
+    if (hasMemento && breed.memento) {
+        popup.add(this.add.text(0, mementoY, `Memento: ${breed.memento.name}`,
+            font('heading', { color: CLR.gold })).setOrigin(0.5));
+        popup.add(this.add.text(0, mementoY + 40, breed.memento.desc,
+            font('body', { color: CLR.white, wordWrap: { width: 450 } })).setOrigin(0.5, 0));
+    } else {
+        popup.add(this.add.text(0, mementoY, 'Memento: ???',
+            font('heading', { color: CLR.muted })).setOrigin(0.5));
+
+        // Progress bar for best dog of this breed
+        const dogsOfBreed = this.dogs.filter(d => d.breedIndex === breedIndex);
+        const bestWork = dogsOfBreed.reduce((max, d) => Math.max(max, d.workTime || 0), 0);
+        const pct = Math.min(1, bestWork / MEMENTO_WORK_SECONDS);
+
+        const barW = 300, barH = 20;
+        const barBg = this.add.graphics();
+        barBg.fillStyle(0x333333);
+        barBg.fillRoundedRect(-barW / 2, mementoY + 30, barW, barH, 6);
+        popup.add(barBg);
+        if (pct > 0) {
+            const barFill = this.add.graphics();
+            barFill.fillStyle(0xDAA520);
+            barFill.fillRoundedRect(-barW / 2, mementoY + 30, barW * pct, barH, 6);
+            popup.add(barFill);
+        }
+        popup.add(this.add.text(0, mementoY + 55, `${Math.floor(pct * 100)}% work time`,
+            font('body', { color: CLR.muted })).setOrigin(0.5));
+    }
+
+    // Condition hint for rare breeds
+    if (breed.rarity === 'rare' && breed.condition && BREED_CONDITION_LABELS[breed.condition.type]) {
+        const hint = BREED_CONDITION_LABELS[breed.condition.type](breed.condition);
+        popup.add(this.add.text(0, ph / 2 - 50, hint,
+            font('body', { color: CLR.orange })).setOrigin(0.5));
+    }
+
+    makeCloseButton(this, popup, pw / 2 - 45, -ph / 2 + 30);
+
+    this.breedDetailCloseZone = this.add.zone(GW / 2, GH / 2, GW, GH)
+        .setDepth(749).setScrollFactor(0).setInteractive();
+    this.breedDetailCloseZone.on('pointerup', () => this.closeBreedDetail());
+
+    popup.setScale(0.8).setAlpha(0);
+    this.tweens.add({
+        targets: popup, scaleX: 1, scaleY: 1, alpha: 1,
+        duration: 200, ease: 'Back.easeOut',
+    });
+};
+
+GameScene.prototype.closeBreedDetail = function() {
+    if (this.breedDetailPopup) { this.breedDetailPopup.destroy(); this.breedDetailPopup = null; }
+    if (this.breedDetailCloseZone) { this.breedDetailCloseZone.destroy(); this.breedDetailCloseZone = null; }
 };
 
 GameScene.prototype.handleRoomTapForLostDog = function(roomIndex) {

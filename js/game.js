@@ -24,6 +24,11 @@ class GameScene extends Phaser.Scene {
         this.buildMenuOpen = false;
         this.roomPanelOpen = false;
 
+        // Dogbook / collection state
+        this.breedsDiscovered = [];
+        this.mementosEarned = [];
+        this.breedTimesSeen = {};
+
         // Scrolling state
         this.isDragging = false;
         this.dragStartY = 0;
@@ -374,14 +379,40 @@ class GameScene extends Phaser.Scene {
         this.buildCloseZone.on('pointerup', () => { if (this.buildMenuOpen) this.toggleBuildMenu(); });
         this.buildCloseZone.disableInteractive();
 
-        // Build button (always visible)
+        // Bottom buttons: DOGS (left) + BUILD (right)
+        const btnY = GH - 60;
+        const dogsX = GW / 2 - 120;
+        const buildX = GW / 2 + 120;
+        const btnW = 220, btnH = 70, btnR = 16;
+
+        // DOGS button
+        this.dogsBtnGfx = this.add.graphics().setDepth(505).setScrollFactor(0);
+        this.dogsBtnGfx.fillStyle(0x8B5E2B);
+        this.dogsBtnGfx.fillRoundedRect(dogsX - btnW / 2, btnY - btnH / 2, btnW, btnH, btnR);
+        this.dogsBtnGfx.lineStyle(3, 0xDDA050);
+        this.dogsBtnGfx.strokeRoundedRect(dogsX - btnW / 2, btnY - btnH / 2, btnW, btnH, btnR);
+
+        this.dogsBtnText = this.add.text(dogsX, btnY, 'DOGS',
+            font('button', { stroke: '#3A2000' })).setOrigin(0.5).setDepth(506).setScrollFactor(0);
+
+        this.dogsBtnZone = this.add.zone(dogsX, btnY, btnW, btnH)
+            .setDepth(507).setScrollFactor(0).setInteractive();
+        this.dogsBtnZone.on('pointerdown', () => this.dogsBtnGfx.setAlpha(0.7));
+        this.dogsBtnZone.on('pointerup', () => {
+            this.dogsBtnGfx.setAlpha(1);
+            this.showDogbook();
+        });
+        this.dogsBtnZone.on('pointerout', () => this.dogsBtnGfx.setAlpha(1));
+
+        // BUILD button
         this.buildBtnGfx = this.add.graphics().setDepth(505).setScrollFactor(0);
+        this.buildBtnX = buildX;
         this.drawBuildButton();
 
-        this.buildBtnText = this.add.text(GW / 2, GH - 60, 'BUILD',
+        this.buildBtnText = this.add.text(buildX, btnY, 'BUILD',
             font('button', { stroke: '#4A2800' })).setOrigin(0.5).setDepth(506).setScrollFactor(0);
 
-        this.buildBtnZone = this.add.zone(GW / 2, GH - 60, 260, 75)
+        this.buildBtnZone = this.add.zone(buildX, btnY, btnW, btnH)
             .setDepth(507).setScrollFactor(0).setInteractive();
         this.buildBtnZone.on('pointerdown', () => this.buildBtnGfx.setAlpha(0.7));
         this.buildBtnZone.on('pointerup', () => {
@@ -419,13 +450,15 @@ class GameScene extends Phaser.Scene {
     }
 
     drawBuildButton(y) {
+        const bx = this.buildBtnX || (GW / 2 + 120);
         const by = y !== undefined ? y : (this.buildBtnY || (GH - 60));
         this.buildBtnY = by;
+        const btnW = 220, btnH = 70, btnR = 16;
         this.buildBtnGfx.clear();
         this.buildBtnGfx.fillStyle(0xDAA520);
-        this.buildBtnGfx.fillRoundedRect(GW / 2 - 120, by - 35, 240, 70, 16);
+        this.buildBtnGfx.fillRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, btnR);
         this.buildBtnGfx.lineStyle(3, 0xFFD700);
-        this.buildBtnGfx.strokeRoundedRect(GW / 2 - 120, by - 35, 240, 70, 16);
+        this.buildBtnGfx.strokeRoundedRect(bx - btnW / 2, by - btnH / 2, btnW, btnH, btnR);
     }
 
     moveBuildButton(targetY) {
@@ -448,6 +481,9 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: this.buildBtnGfx, alpha, duration: dur });
         this.tweens.add({ targets: this.buildBtnText, alpha, duration: dur });
         this.tweens.add({ targets: this.buildBtnZone, alpha, duration: dur });
+        this.tweens.add({ targets: this.dogsBtnGfx, alpha, duration: dur });
+        this.tweens.add({ targets: this.dogsBtnText, alpha, duration: dur });
+        this.tweens.add({ targets: this.dogsBtnZone, alpha, duration: dur });
     }
 
     // --- ROOM PANEL (room details/upgrade) ---
@@ -791,7 +827,11 @@ class GameScene extends Phaser.Scene {
                 skills: d.skills,
                 dreamSkill: d.dreamSkill,
                 assignedRoom: d.assignedRoom,
+                workTime: d.workTime || 0,
             })),
+            breedsDiscovered: this.breedsDiscovered,
+            mementosEarned: this.mementosEarned,
+            breedTimesSeen: this.breedTimesSeen,
         };
         try {
             localStorage.setItem('dogFortress_save', JSON.stringify(data));
@@ -812,6 +852,9 @@ class GameScene extends Phaser.Scene {
             this.totalRoomsBuilt = data.totalRoomsBuilt || 0;
             this.shieldMedals = data.shieldMedals || 0;
             this.waveCountdown = 60;
+            this.breedsDiscovered = data.breedsDiscovered || [];
+            this.mementosEarned = data.mementosEarned || [];
+            this.breedTimesSeen = data.breedTimesSeen || {};
 
             // Restore rooms
             data.rooms.forEach((rd, i) => {
@@ -865,6 +908,7 @@ class GameScene extends Phaser.Scene {
                     skills: dd.skills || { combat: 1, production: 1, repair: 1, communication: 1 },
                     dreamSkill: dd.dreamSkill || 'production',
                     assignedRoom: dd.assignedRoom,
+                    workTime: dd.workTime || 0,
                     sprite: null,
                 };
                 this.dogs.push(dog);
@@ -890,6 +934,14 @@ class GameScene extends Phaser.Scene {
                         yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
                     });
                 }
+            });
+
+            // Backfill breed discovery from existing dogs (save compatibility)
+            this.dogs.forEach(d => {
+                if (!this.breedsDiscovered.includes(d.breedIndex)) {
+                    this.breedsDiscovered.push(d.breedIndex);
+                }
+                this.breedTimesSeen[d.breedIndex] = (this.breedTimesSeen[d.breedIndex] || 0) + 1;
             });
 
             // Update room active states (inactive overlay)
